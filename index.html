@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CUHK 校巴到站預告</title>
+    <!-- 引入 Tailwind CSS (美觀) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 PapaParse (用來讀取 CSV) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+</head>
+<body class="bg-gray-100 p-6">
+    <div class="max-w-md mx-auto">
+        <h1 class="text-2xl font-bold mb-4 text-purple-800">CUHK 校巴時間表</h1>
+        
+        <div id="bus-list" class="space-y-3">
+            <!-- 這裡的內容會由 JavaScript 自動生成 -->
+            <p class="text-gray-500">正在載入數據...</p>
+        </div>
+    </div>
+
+    <script>
+        // ★★★ 把下面這條 link 換成你的 Google Sheet CSV link ★★★
+        const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSRZKtMDUfO6OIolDn6HIz3wQ1QwRYB1-PMu3XMEPg5l06BJib6aWyawFj_6h_iSTdBTKS-t6Di6DOv/pub?output=csv' + '&t=' + Date.now();
+
+        Papa.parse(sheetURL, {
+            download: true,
+            header: true,
+            complete: function(results) {
+                const data = results.data;
+                const listDiv = document.getElementById('bus-list');
+                listDiv.innerHTML = ''; // 清空載入中文字
+
+                // 簡單過濾：只顯示未來的班次 (這裡只做簡單示範)
+                const now = new Date();
+                const currentHm = now.getHours() * 60 + now.getMinutes(); // 轉成分鐘數
+
+                data.forEach(bus => {
+                    // 假設你的 CSV 時間格式是 "14:30"
+                    if(!bus.Time) return;
+                    
+                    const [h, m] = bus.Time.split(':').map(Number);
+                    const busHm = h * 60 + m;
+
+                    // 這裡只是簡單把所有班次列出來，你可以叫 AI 幫你寫「只顯示未來班次」的邏輯
+                    const card = `
+                        <div class="bg-white p-4 rounded-lg shadow flex justify-between items-center">
+                            <div>
+                                <span class="text-xl font-bold text-gray-800">${bus.Route}</span>
+                                <span class="text-sm text-gray-500 ml-2">${bus.Note || ''}</span>
+                            </div>
+                            <div class="text-lg font-mono text-purple-600 font-bold">
+                                ${bus.Time}
+                            </div>
+                        </div>
+                    `;
+                    listDiv.innerHTML += card;
+                });
+            }
+        });
+    </script>
+</body>
+</html>

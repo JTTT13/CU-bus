@@ -2,62 +2,193 @@
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CUHK 校巴到站預告</title>
-    <!-- 引入 Tailwind CSS (美觀) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CUHK 校巴 Vibe</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 PapaParse (用來讀取 CSV) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        /* 隱藏 Scrollbar 但保持功能，令介面更乾淨 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
 </head>
-<body class="bg-gray-100 p-6">
-    <div class="max-w-md mx-auto">
-        <h1 class="text-2xl font-bold mb-4 text-purple-800">CUHK 校巴時間表</h1>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+    <!-- Header 區域 -->
+    <div class="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md shadow-sm z-50 px-4 py-3">
+        <div class="flex justify-between items-center max-w-md mx-auto">
+            <div>
+                <h1 class="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-500 bg-clip-text text-transparent">
+                    CUHK Bus
+                </h1>
+                <p id="current-time" class="text-xs text-slate-500 font-mono mt-0.5">載入中...</p>
+            </div>
+            <button onclick="loadData()" class="p-2 bg-slate-100 rounded-full active:scale-95 transition">
+                🔄
+            </button>
+        </div>
         
+        <!-- 路線 Filter 按鈕 (自動生成) -->
+        <div id="filter-container" class="flex gap-2 overflow-x-auto no-scrollbar mt-3 pb-1 max-w-md mx-auto">
+            <!-- JavaScript 會在這裡插入按鈕 -->
+        </div>
+    </div>
+
+    <!-- 列表區域 -->
+    <div class="pt-32 pb-10 px-4 max-w-md mx-auto">
         <div id="bus-list" class="space-y-3">
-            <!-- 這裡的內容會由 JavaScript 自動生成 -->
-            <p class="text-gray-500">正在載入數據...</p>
+            <div class="text-center text-gray-400 py-10 animate-pulse">正在尋找校巴數據...</div>
+        </div>
+        
+        <div class="text-center text-xs text-gray-400 mt-8 mb-4">
+            數據來自 Google Sheets • 僅供參考<br>請預留跑路時間 🏃
         </div>
     </div>
 
     <script>
-        // ★★★ 把下面這條 link 換成你的 Google Sheet CSV link ★★★
-        const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSRZKtMDUfO6OIolDn6HIz3wQ1QwRYB1-PMu3XMEPg5l06BJib6aWyawFj_6h_iSTdBTKS-t6Di6DOv/pub?output=csv' + '&t=' + Date.now();
+        // ★★★ 記得換返你條 Link！★★★
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSRZKtMDUfO6OIolDn6HIz3wQ1QwRYB1-PMu3XMEPg5l06BJib6aWyawFj_6h_iSTdBTKS-t6Di6DOv/pub?output=csv';
+        
+        let allBusData = [];
+        let activeFilter = 'All';
 
-        Papa.parse(sheetURL, {
-            download: true,
-            header: true,
-            complete: function(results) {
-                const data = results.data;
-                const listDiv = document.getElementById('bus-list');
-                listDiv.innerHTML = ''; // 清空載入中文字
+        // 1. 初始化
+        window.onload = function() {
+            updateClock();
+            setInterval(updateClock, 1000); // 每秒更新時鐘
+            loadData();
+            setInterval(loadData, 60000); // 每60秒自動重新抓取數據
+        };
 
-                // 簡單過濾：只顯示未來的班次 (這裡只做簡單示範)
-                const now = new Date();
-                const currentHm = now.getHours() * 60 + now.getMinutes(); // 轉成分鐘數
+        // 2. 更新頂部時鐘
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('current-time').innerText = 
+                now.toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
 
-                data.forEach(bus => {
-                    // 假設你的 CSV 時間格式是 "14:30"
-                    if(!bus.Time) return;
-                    
+        // 3. 抓取數據 (核心)
+        function loadData() {
+            const btn = document.querySelector('button');
+            btn.classList.add('animate-spin'); // 加個旋轉效果
+            
+            // Cache Busting: 加個隨機數防止瀏覽器用舊數據
+            const url = SHEET_URL + '&t=' + Date.now();
+
+            Papa.parse(url, {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    btn.classList.remove('animate-spin');
+                    processData(results.data);
+                },
+                error: function() {
+                    btn.classList.remove('animate-spin');
+                    document.getElementById('bus-list').innerHTML = '<p class="text-center text-red-500">數據載入失敗，請檢查網絡</p>';
+                }
+            });
+        }
+
+        // 4. 處理數據邏輯
+        function processData(data) {
+            const now = new Date();
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+            // 過濾並計算剩餘時間
+            allBusData = data
+                .filter(bus => bus.Time && bus.Route) // 確保有時間和路線
+                .map(bus => {
                     const [h, m] = bus.Time.split(':').map(Number);
-                    const busHm = h * 60 + m;
+                    const busMinutes = h * 60 + m;
+                    const diff = busMinutes - currentMinutes;
+                    return { ...bus, diff, busMinutes };
+                })
+                .filter(bus => bus.diff >= 0) // 只保留未來的車 (diff >= 0)
+                .sort((a, b) => a.diff - b.diff); // 按時間排序，最近的在上面
 
-                    // 這裡只是簡單把所有班次列出來，你可以叫 AI 幫你寫「只顯示未來班次」的邏輯
-                    const card = `
-                        <div class="bg-white p-4 rounded-lg shadow flex justify-between items-center">
-                            <div>
-                                <span class="text-xl font-bold text-gray-800">${bus.Route}</span>
-                                <span class="text-sm text-gray-500 ml-2">${bus.Note || ''}</span>
-                            </div>
-                            <div class="text-lg font-mono text-purple-600 font-bold">
-                                ${bus.Time}
-                            </div>
-                        </div>
-                    `;
-                    listDiv.innerHTML += card;
-                });
+            generateFilters();
+            renderList();
+        }
+
+        // 5. 生成 Filter 按鈕
+        function generateFilters() {
+            const container = document.getElementById('filter-container');
+            // 找出所有獨特的路線
+            const routes = ['All', ...new Set(allBusData.map(b => b.Route))];
+            
+            // 如果按鈕已經存在且數量沒變，就不重繪，避免閃爍
+            if (container.children.length === routes.length) return;
+
+            container.innerHTML = routes.map(route => `
+                <button onclick="setFilter('${route}')" 
+                    class="px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors
+                    ${activeFilter === route ? 'bg-purple-600 text-white shadow-md' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}">
+                    ${route}
+                </button>
+            `).join('');
+        }
+
+        // 6. 切換 Filter
+        window.setFilter = function(route) {
+            activeFilter = route;
+            generateFilters(); // 更新按鈕樣式
+            renderList();      // 更新列表
+        }
+
+        // 7. 渲染列表 (UI)
+        function renderList() {
+            const listDiv = document.getElementById('bus-list');
+            
+            const filteredData = activeFilter === 'All' 
+                ? allBusData 
+                : allBusData.filter(b => b.Route === activeFilter);
+
+            if (filteredData.length === 0) {
+                listDiv.innerHTML = `
+                    <div class="text-center py-10 bg-white rounded-xl shadow-sm">
+                        <p class="text-4xl mb-2">😴</p>
+                        <p class="text-gray-500">暫時沒有 ${activeFilter === 'All' ? '' : activeFilter + ' 號'} 車</p>
+                    </div>`;
+                return;
             }
-        });
+
+            listDiv.innerHTML = filteredData.map(bus => {
+                // 根據剩餘時間決定顏色
+                let timeClass = 'text-green-600 bg-green-50';
+                let urgencyText = '分鐘';
+                
+                if (bus.diff <= 5) {
+                    timeClass = 'text-red-600 bg-red-50 animate-pulse'; // 少於5分鐘閃爍
+                    urgencyText = '趕快!';
+                } else if (bus.diff <= 10) {
+                    timeClass = 'text-yellow-600 bg-yellow-50';
+                }
+
+                // 如果是大於 60 分鐘，顯示小時
+                let displayDiff = bus.diff;
+                if (bus.diff > 60) {
+                   displayDiff = Math.floor(bus.diff / 60) + '小時' + (bus.diff % 60);
+                }
+
+                return `
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex justify-between items-center transform transition hover:scale-[1.02]">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-slate-800 text-white font-bold w-10 h-10 rounded-lg flex items-center justify-center text-lg">
+                            ${bus.Route}
+                        </div>
+                        <div>
+                            <div class="font-bold text-slate-700 text-lg">${bus.Time}</div>
+                            <div class="text-xs text-slate-400">${bus.Note || '正常班次'}</div>
+                        </div>
+                    </div>
+                    <div class="px-3 py-1 rounded-lg font-bold text-right ${timeClass}">
+                        <div class="text-xl leading-none">${displayDiff}</div>
+                        <div class="text-[10px] opacity-80">${urgencyText}</div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
     </script>
 </body>
 </html>

@@ -5,190 +5,279 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CUHK 校巴 Vibe</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
-        /* 隱藏 Scrollbar 但保持功能，令介面更乾淨 */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* 防止 iOS 點擊高亮 */
+        button { -webkit-tap-highlight-color: transparent; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen">
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans">
 
     <!-- Header 區域 -->
-    <div class="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md shadow-sm z-50 px-4 py-3">
-        <div class="flex justify-between items-center max-w-md mx-auto">
-            <div>
-                <h1 class="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-500 bg-clip-text text-transparent">
-                    CUHK Bus
-                </h1>
-                <p id="current-time" class="text-xs text-slate-500 font-mono mt-0.5">載入中...</p>
+    <div class="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-md shadow-sm z-50 px-4 pt-3 pb-1 border-b border-slate-100">
+        <div class="max-w-md mx-auto">
+            <!-- Top Row: Title & Time & Refresh -->
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                    <h1 class="text-2xl font-black bg-gradient-to-r from-purple-700 to-blue-600 bg-clip-text text-transparent tracking-tighter">
+                        CUHK Bus
+                    </h1>
+                    <p id="current-time" class="text-xs text-slate-400 font-mono font-medium mt-0.5">載入中...</p>
+                </div>
+                <button onclick="loadData()" id="refresh-btn" class="p-2 bg-slate-50 text-slate-600 rounded-full active:scale-95 transition hover:bg-slate-100 border border-slate-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
             </div>
-            <button onclick="loadData()" class="p-2 bg-slate-100 rounded-full active:scale-95 transition">
-                🔄
-            </button>
-        </div>
-        
-        <!-- 路線 Filter 按鈕 (自動生成) -->
-        <div id="filter-container" class="flex gap-2 overflow-x-auto no-scrollbar mt-3 pb-1 max-w-md mx-auto">
-            <!-- JavaScript 會在這裡插入按鈕 -->
+
+            <!-- Mode Selector (平日/假日切換) -->
+            <div id="mode-selector" class="flex gap-2 mb-3">
+                <!-- Javascript 會填充這裡 -->
+            </div>
+            
+            <!-- 路線 Filter 按鈕 -->
+            <div id="filter-container" class="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                <!-- Javascript 會填充這裡 -->
+            </div>
         </div>
     </div>
 
     <!-- 列表區域 -->
-    <div class="pt-32 pb-10 px-4 max-w-md mx-auto">
-        <div id="bus-list" class="space-y-3">
-            <div class="text-center text-gray-400 py-10 animate-pulse">正在尋找校巴數據...</div>
+    <div class="pt-40 pb-12 px-4 max-w-md mx-auto">
+        <div id="bus-list" class="space-y-3 min-h-[50vh]">
+            <div class="flex flex-col items-center justify-center py-20 animate-pulse space-y-4">
+                <div class="w-12 h-12 bg-slate-200 rounded-full"></div>
+                <div class="h-4 w-32 bg-slate-200 rounded"></div>
+            </div>
         </div>
         
-        <div class="text-center text-xs text-gray-400 mt-8 mb-4">
-            數據來自 Google Sheets • 僅供參考<br>請預留跑路時間 🏃
+        <div class="text-center text-[10px] text-gray-300 mt-10 mb-6">
+            數據來自校巴資料庫 • JSON Static Mode<br>
+            請預留跑路時間 🏃
         </div>
     </div>
 
     <script>
-        // ★★★ 記得換返你條 Link！★★★
-        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSRZKtMDUfO6OIolDn6HIz3wQ1QwRYB1-PMu3XMEPg5l06BJib6aWyawFj_6h_iSTdBTKS-t6Di6DOv/pub?output=csv';
+        // --- 設定與狀態 ---
+        const DATA_URL = 'bus_data.json';
+        let rawData = [];
+        let activeRouteFilter = 'All';
         
-        let allBusData = [];
-        let activeFilter = 'All';
+        // 自動偵測模式：如果是星期日(0)，預設為 sunday，否則 weekday
+        let currentMode = new Date().getDay() === 0 ? 'sunday' : 'weekday';
 
-        // 1. 初始化
+        // --- 初始化 ---
         window.onload = function() {
+            renderModeSelector();
             updateClock();
-            setInterval(updateClock, 1000); // 每秒更新時鐘
+            setInterval(updateClock, 1000);
             loadData();
-            setInterval(loadData, 60000); // 每60秒自動重新抓取數據
+            // 每 60 秒自動重整一次資料
+            setInterval(loadData, 60000); 
         };
 
-        // 2. 更新頂部時鐘
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('current-time').innerText = 
-                now.toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        }
+        // --- 核心功能 ---
 
-        // 3. 抓取數據 (核心)
+        // 1. 讀取 JSON
         function loadData() {
-            const btn = document.querySelector('button');
-            btn.classList.add('animate-spin'); // 加個旋轉效果
-            
-            // Cache Busting: 加個隨機數防止瀏覽器用舊數據
-            const url = SHEET_URL + '&t=' + Date.now();
+            const btn = document.getElementById('refresh-btn');
+            btn.classList.add('animate-spin');
 
-            Papa.parse(url, {
-                download: true,
-                header: true,
-                complete: function(results) {
+            fetch(DATA_URL + '?t=' + Date.now()) // 加 timestamp 防止 cache
+                .then(response => {
+                    if (!response.ok) throw new Error("HTTP " + response.status);
+                    return response.json();
+                })
+                .then(json => {
+                    rawData = json;
                     btn.classList.remove('animate-spin');
-                    processData(results.data);
-                },
-                error: function() {
+                    processData();
+                })
+                .catch(err => {
+                    console.error(err);
                     btn.classList.remove('animate-spin');
-                    document.getElementById('bus-list').innerHTML = '<p class="text-center text-red-500">數據載入失敗，請檢查網絡</p>';
-                }
-            });
+                    document.getElementById('bus-list').innerHTML = `
+                        <div class="text-center py-10">
+                            <p class="text-red-500 font-bold mb-2">讀取失敗</p>
+                            <p class="text-xs text-slate-400">請確認 bus_data.json 存在且格式正確</p>
+                        </div>`;
+                });
         }
 
-        // 4. 處理數據邏輯
-        function processData(data) {
+        // 2. 處理數據 (過濾、計算時間)
+        function processData() {
+            if (!rawData || rawData.length === 0) return;
+
             const now = new Date();
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            let upcomingBuses = [];
 
-            // 過濾並計算剩餘時間
-            allBusData = data
-                .filter(bus => bus.Time && bus.Route) // 確保有時間和路線
-                .map(bus => {
-                    const [h, m] = bus.Time.split(':').map(Number);
-                    const busMinutes = h * 60 + m;
-                    const diff = busMinutes - currentMinutes;
-                    return { ...bus, diff, busMinutes };
-                })
-                .filter(bus => bus.diff >= 0) // 只保留未來的車 (diff >= 0)
-                .sort((a, b) => a.diff - b.diff); // 按時間排序，最近的在上面
+            rawData.forEach(route => {
+                // A. 模式過濾 (平日 vs 假日)
+                // 這裡做簡單字串匹配，根據你的 DB 內容調整
+                const dt = route.DayType || "";
+                let isMatch = false;
 
-            generateFilters();
-            renderList();
+                if (currentMode === 'weekday') {
+                    // 平日模式：包含 MON, FRI, SAT, N, 或沒有標記
+                    if (dt.includes('MON') || dt === 'N' || dt === "") isMatch = true;
+                } else {
+                    // 假日模式：包含 SUN, HOLIDAY, N
+                    if (dt.includes('SUN') || dt.includes('HOLIDAY') || dt === 'N') isMatch = true;
+                }
+
+                if (!isMatch) return;
+
+                // B. 時間計算
+                if (route.Times && Array.isArray(route.Times)) {
+                    route.Times.forEach(timeStr => {
+                        // 簡單格式檢查 HH:MM
+                        if (!timeStr.includes(':')) return;
+
+                        const [h, m] = timeStr.split(':').map(Number);
+                        const busMinutes = h * 60 + m;
+                        const diff = busMinutes - currentMinutes;
+
+                        // 只顯示未來 120 分鐘內的車
+                        if (diff >= 0 && diff <= 120) {
+                            upcomingBuses.push({
+                                Route: route.Route,
+                                RouteEn: route.RouteEn,
+                                Time: timeStr.substring(0, 5),
+                                Note: route.Note,
+                                diff: diff
+                            });
+                        }
+                    });
+                }
+            });
+
+            // C. 排序 (最近的在上面)
+            upcomingBuses.sort((a, b) => a.diff - b.diff);
+
+            renderFilters(upcomingBuses);
+            renderList(upcomingBuses);
         }
 
-        // 5. 生成 Filter 按鈕
-        function generateFilters() {
-            const container = document.getElementById('filter-container');
-            // 找出所有獨特的路線
-            const routes = ['All', ...new Set(allBusData.map(b => b.Route))];
-            
-            // 如果按鈕已經存在且數量沒變，就不重繪，避免閃爍
-            if (container.children.length === routes.length) return;
-
-            container.innerHTML = routes.map(route => `
-                <button onclick="setFilter('${route}')" 
-                    class="px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors
-                    ${activeFilter === route ? 'bg-purple-600 text-white shadow-md' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}">
-                    ${route}
-                </button>
-            `).join('');
-        }
-
-        // 6. 切換 Filter
-        window.setFilter = function(route) {
-            activeFilter = route;
-            generateFilters(); // 更新按鈕樣式
-            renderList();      // 更新列表
-        }
-
-        // 7. 渲染列表 (UI)
-        function renderList() {
+        // 3. 渲染列表
+        function renderList(buses) {
             const listDiv = document.getElementById('bus-list');
             
-            const filteredData = activeFilter === 'All' 
-                ? allBusData 
-                : allBusData.filter(b => b.Route === activeFilter);
+            // 應用路線篩選
+            const filtered = activeRouteFilter === 'All' 
+                ? buses 
+                : buses.filter(b => b.Route === activeRouteFilter);
 
-            if (filteredData.length === 0) {
+            // 只顯示前 50 班，避免 DOM 過多
+            const displayBuses = filtered.slice(0, 50);
+
+            if (displayBuses.length === 0) {
                 listDiv.innerHTML = `
-                    <div class="text-center py-10 bg-white rounded-xl shadow-sm">
-                        <p class="text-4xl mb-2">😴</p>
-                        <p class="text-gray-500">暫時沒有 ${activeFilter === 'All' ? '' : activeFilter + ' 號'} 車</p>
+                    <div class="text-center py-16 px-6 bg-white rounded-3xl border border-slate-100 shadow-sm mx-2">
+                        <div class="text-6xl mb-4">💤</div>
+                        <h3 class="text-lg font-bold text-slate-700 mb-1">暫時冇車</h3>
+                        <p class="text-slate-400 text-sm">
+                            目前模式：<span class="font-medium text-slate-600">${currentMode === 'weekday' ? '平日' : '假日'}</span>
+                            <br>試吓轉 Mode 或者揀 All？
+                        </p>
                     </div>`;
                 return;
             }
 
-            listDiv.innerHTML = filteredData.map(bus => {
-                // 根據剩餘時間決定顏色
-                let timeClass = 'text-green-600 bg-green-50';
-                let urgencyText = '分鐘';
+            listDiv.innerHTML = displayBuses.map(bus => {
+                // 樣式邏輯
+                let statusColor = 'text-emerald-600 bg-emerald-50';
+                let statusText = '分鐘';
+                let rowBorder = 'border-slate-100';
                 
                 if (bus.diff <= 5) {
-                    timeClass = 'text-red-600 bg-red-50 animate-pulse'; // 少於5分鐘閃爍
-                    urgencyText = '趕快!';
-                } else if (bus.diff <= 10) {
-                    timeClass = 'text-yellow-600 bg-yellow-50';
+                    statusColor = 'text-rose-600 bg-rose-50 font-bold';
+                    statusText = '即將到達';
+                    rowBorder = 'border-rose-100';
+                } else if (bus.diff <= 15) {
+                    statusColor = 'text-amber-600 bg-amber-50';
                 }
 
-                // 如果是大於 60 分鐘，顯示小時
                 let displayDiff = bus.diff;
                 if (bus.diff > 60) {
-                   displayDiff = Math.floor(bus.diff / 60) + '小時' + (bus.diff % 60);
+                    displayDiff = Math.floor(bus.diff/60) + '<span class="text-xs font-normal">h</span>' + (bus.diff%60);
                 }
 
                 return `
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex justify-between items-center transform transition hover:scale-[1.02]">
+                <div class="group bg-white p-3 rounded-2xl shadow-sm border ${rowBorder} flex justify-between items-center mb-2 hover:shadow-md transition-all active:scale-[0.99]">
                     <div class="flex items-center gap-3">
-                        <div class="bg-slate-800 text-white font-bold w-10 h-10 rounded-lg flex items-center justify-center text-lg">
+                        <div class="bg-slate-800 text-white font-bold font-mono w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-sm group-hover:bg-slate-700 transition-colors">
                             ${bus.Route}
                         </div>
                         <div>
-                            <div class="font-bold text-slate-700 text-lg">${bus.Time}</div>
-                            <div class="text-xs text-slate-400">${bus.Note || '正常班次'}</div>
+                            <div class="font-bold text-slate-700 text-lg leading-none mb-1">${bus.Time}</div>
+                            <div class="text-[11px] text-slate-400 font-medium leading-none truncate max-w-[120px]">${bus.Note || ''}</div>
                         </div>
                     </div>
-                    <div class="px-3 py-1 rounded-lg font-bold text-right ${timeClass}">
-                        <div class="text-xl leading-none">${displayDiff}</div>
-                        <div class="text-[10px] opacity-80">${urgencyText}</div>
+                    <div class="px-3 py-2 rounded-xl text-right ${statusColor} min-w-[70px]">
+                        <div class="text-2xl font-black leading-none tracking-tight">${displayDiff}</div>
+                        <div class="text-[10px] opacity-80 font-medium mt-0.5">${statusText}</div>
                     </div>
                 </div>
                 `;
             }).join('');
         }
+
+        // 4. 渲染 Filter 按鈕
+        function renderFilters(buses) {
+            const container = document.getElementById('filter-container');
+            // 只在第一次或路線數量變化時重繪，避免閃爍 (這裡簡化為每次重繪，因為性能開銷很小)
+            
+            // 提取所有有車的路線，並排序
+            const routes = ['All', ...new Set(buses.map(b => b.Route))].sort();
+            
+            container.innerHTML = routes.map(route => `
+                <button onclick="setFilter('${route}')" 
+                    class="px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all border
+                    ${activeRouteFilter === route 
+                        ? 'bg-slate-800 text-white border-slate-800 shadow-md' 
+                        : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}">
+                    ${route}
+                </button>
+            `).join('');
+        }
+
+        // 5. UI 交互功能
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('current-time').innerText = `${timeStr}`;
+        }
+
+        function renderModeSelector() {
+            const container = document.getElementById('mode-selector');
+            container.innerHTML = `
+                <button onclick="changeMode('weekday')" class="flex-1 py-1.5 text-xs font-bold rounded-lg border transition-all ${currentMode === 'weekday' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-slate-100 text-slate-400 border-transparent hover:bg-slate-200'}">
+                    平日/教學日
+                </button>
+                <button onclick="changeMode('sunday')" class="flex-1 py-1.5 text-xs font-bold rounded-lg border transition-all ${currentMode === 'sunday' ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-slate-100 text-slate-400 border-transparent hover:bg-slate-200'}">
+                    假日/星期日
+                </button>
+            `;
+        }
+
+        window.changeMode = function(mode) {
+            currentMode = mode;
+            renderModeSelector();
+            processData(); // 重新過濾
+            // 視覺回饋
+            try { navigator.vibrate(10); } catch(e){}
+        }
+
+        window.setFilter = function(route) {
+            activeRouteFilter = route;
+            processData();
+            // 視覺回饋
+            try { navigator.vibrate(10); } catch(e){}
+        }
+
     </script>
 </body>
 </html>

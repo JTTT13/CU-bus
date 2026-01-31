@@ -1,7 +1,60 @@
-<script>
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CUHK Bus Vibe - 車站查詢</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        body { -webkit-tap-highlight-color: transparent; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+    <!-- Header -->
+    <div class="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-md shadow-sm z-50 px-4 pt-4 pb-2 border-b border-slate-100">
+        <div class="max-w-md mx-auto">
+            <div class="flex justify-between items-center mb-3">
+                <div>
+                    <h1 class="text-2xl font-black bg-gradient-to-r from-purple-700 to-blue-600 bg-clip-text text-transparent">
+                        CUHK Bus
+                    </h1>
+                    <p id="current-time" class="text-xs text-slate-400 font-mono">載入中...</p>
+                </div>
+                <button onclick="loadData()" class="p-2 bg-slate-100 rounded-full active:scale-90 transition">🔄</button>
+            </div>
+
+            <!-- 模式切換 -->
+            <div id="mode-selector" class="flex gap-2 mb-4">
+                <!-- 由 JS 填充 -->
+            </div>
+
+            <!-- 車站選擇 (橫向捲動) -->
+            <p class="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-widest">選擇車站 Select Stop</p>
+            <div id="filter-container" class="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                <!-- 由 JS 填充 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 列表 -->
+    <div class="pt-48 pb-10 px-4 max-w-md mx-auto">
+        <div id="bus-list" class="space-y-3">
+            <!-- 預設顯示載入中 -->
+            <div class="text-center py-20 text-slate-300 animate-pulse">正在讀取校巴資料...</div>
+        </div>
+        
+        <div class="text-center text-[10px] text-slate-300 mt-10">
+            數據來自校巴資料庫 • Static JSON Mode
+        </div>
+    </div>
+
+    <script>
         const DATA_URL = 'bus_data.json';
         let db = { stops: [], arrivals: [] };
-        let currentStopId = ''; // 當前選中的車站
+        let currentStopId = '';
         let currentMode = new Date().getDay() === 0 ? 'sunday' : 'weekday';
 
         window.onload = function() {
@@ -9,29 +62,44 @@
             updateClock();
             setInterval(updateClock, 1000);
             loadData();
+            setInterval(loadData, 60000); // 每一分鐘自動刷新
         };
 
         function loadData() {
             fetch(DATA_URL + '?t=' + Date.now())
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) throw new Error("找不到 bus_data.json");
+                    return res.json();
+                })
                 .then(data => {
                     db = data;
-                    // 預設選中第一個站（通常是大學站）
-                    if (db.stops.length > 0) {
+                    // 如果目前沒選車站，預設選第一個
+                    if (!currentStopId && db.stops && db.stops.length > 0) {
                         currentStopId = db.stops[0].id;
                     }
                     renderStopSelector();
                     processAndRender();
+                })
+                .catch(err => {
+                    console.error(err);
+                    document.getElementById('bus-list').innerHTML = `
+                        <div class="text-center py-20 bg-white rounded-2xl border border-red-100">
+                            <p class="text-red-500 font-bold">資料加載失敗</p>
+                            <p class="text-xs text-slate-400 mt-2">請確保 bus_data.json 已上傳至伺服器</p>
+                        </div>`;
                 });
         }
 
-        // 渲染車站選擇器 (橫向滾動)
         function renderStopSelector() {
             const container = document.getElementById('filter-container');
+            if (!db.stops) return;
+            
             container.innerHTML = db.stops.map(stop => `
                 <button onclick="setStop('${stop.id}')" 
                     class="px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all border
-                    ${currentStopId === stop.id ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200'}">
+                    ${currentStopId === stop.id 
+                        ? 'bg-slate-800 text-white border-slate-800 shadow-md' 
+                        : 'bg-white text-slate-500 border-slate-200'}">
                     ${stop.name_zh}
                 </button>
             `).join('');
@@ -41,6 +109,7 @@
             currentStopId = id;
             renderStopSelector();
             processAndRender();
+            try { window.scrollTo({top: 0, behavior: 'smooth'}); } catch(e){}
         };
 
         function processAndRender() {
@@ -48,7 +117,8 @@
             const now = new Date();
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-            // 1. 過濾出該站、該模式、未來的車
+            if (!db.arrivals) return;
+
             const filtered = db.arrivals.filter(arr => {
                 if (arr.stop_id !== currentStopId) return false;
 
@@ -56,7 +126,7 @@
                 const dt = arr.day_type || "";
                 let isModeMatch = false;
                 if (currentMode === 'weekday') {
-                    if (dt.includes('MON') || dt === 'N') isModeMatch = true;
+                    if (dt.includes('MON') || dt === 'N' || dt === "") isModeMatch = true;
                 } else {
                     if (dt.includes('SUN') || dt.includes('HOLIDAY') || dt === 'N') isModeMatch = true;
                 }
@@ -64,56 +134,81 @@
 
                 // 時間計算
                 const [h, m] = arr.arrival_time.split(':').map(Number);
-                arr.diff = (h * 60 + m) - currentMinutes;
+                arr.totalMin = h * 60 + m;
+                arr.diff = arr.totalMin - currentMinutes;
                 arr.displayTime = arr.arrival_time.substring(0, 5);
 
-                return arr.diff >= -2 && arr.diff <= 180; // 顯示未來3小時，及剛走2分鐘內的車
+                // 只顯示未來 180 分鐘內的車
+                return arr.diff >= -1 && arr.diff <= 180;
             });
 
-            // 2. 排序
+            // 排序
             filtered.sort((a, b) => a.diff - b.diff);
 
-            // 3. 渲染
             if (filtered.length === 0) {
-                listDiv.innerHTML = `<div class="text-center py-20 text-slate-400">該時段暫無班次經過此站</div>`;
+                listDiv.innerHTML = `
+                    <div class="text-center py-20 bg-white rounded-3xl border border-slate-100">
+                        <p class="text-4xl mb-4">😴</p>
+                        <p class="text-slate-500 font-bold">目前暫無班次</p>
+                        <p class="text-xs text-slate-400">請嘗試切換模式或車站</p>
+                    </div>`;
                 return;
             }
 
             listDiv.innerHTML = filtered.map(bus => {
                 let statusColor = 'text-emerald-600 bg-emerald-50';
-                if (bus.diff <= 5) statusColor = 'text-rose-600 bg-rose-50 animate-pulse font-bold';
+                let statusText = '分鐘';
                 
+                if (bus.diff <= 0) {
+                    statusColor = 'text-slate-400 bg-slate-50';
+                    statusText = '已抵達';
+                } else if (bus.diff <= 5) {
+                    statusColor = 'text-rose-600 bg-rose-50 animate-pulse font-bold';
+                    statusText = '即將抵達';
+                }
+
                 return `
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center mb-2">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center transition-all active:scale-95">
                     <div class="flex items-center gap-4">
-                        <div class="bg-slate-800 text-white font-bold w-12 h-12 rounded-xl flex items-center justify-center text-xl">
+                        <div class="bg-slate-800 text-white font-bold w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-inner">
                             ${bus.route_name}
                         </div>
                         <div>
-                            <div class="font-bold text-slate-700 text-lg">${bus.displayTime}</div>
-                            <div class="text-[10px] text-slate-400">${bus.note || '正常班次'}</div>
+                            <div class="font-bold text-slate-700 text-lg leading-tight">${bus.displayTime}</div>
+                            <div class="text-[10px] text-slate-400 mt-1 font-medium">${bus.note || '正常班次'}</div>
                         </div>
                     </div>
-                    <div class="px-3 py-1 rounded-lg text-right ${statusColor}">
-                        <div class="text-2xl font-black">${bus.diff <= 0 ? '已抵達' : bus.diff}</div>
-                        <div class="text-[10px] opacity-80">${bus.diff <= 0 ? 'Arrived' : '分鐘'}</div>
+                    <div class="px-4 py-2 rounded-xl text-right ${statusColor} min-w-[80px]">
+                        <div class="text-2xl font-black leading-none">${bus.diff <= 0 ? '--' : bus.diff}</div>
+                        <div class="text-[10px] opacity-80 mt-1 font-bold">${statusText}</div>
                     </div>
                 </div>
                 `;
             }).join('');
         }
 
-        // --- 其餘模式切換代碼 (保持之前提供的內容) ---
         function renderModeSelector() {
             const container = document.getElementById('mode-selector');
             container.innerHTML = `
-                <button onclick="changeMode('weekday')" class="flex-1 py-2 text-xs font-bold rounded-lg border ${currentMode === 'weekday' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-100 text-slate-400'}">平日/教學日</button>
-                <button onclick="changeMode('sunday')" class="flex-1 py-2 text-xs font-bold rounded-lg border ${currentMode === 'sunday' ? 'bg-red-500 text-white border-red-500' : 'bg-slate-100 text-slate-400'}">假日/星期日</button>
+                <button onclick="changeMode('weekday')" class="flex-1 py-2 text-xs font-bold rounded-xl border transition-all ${currentMode === 'weekday' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-slate-400 border-slate-200'}">
+                    平日/教學日
+                </button>
+                <button onclick="changeMode('sunday')" class="flex-1 py-2 text-xs font-bold rounded-xl border transition-all ${currentMode === 'sunday' ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-white text-slate-400 border-slate-200'}">
+                    假日/星期日
+                </button>
             `;
         }
-        window.changeMode = function(m) { currentMode = m; renderModeSelector(); processAndRender(); };
+
+        window.changeMode = function(m) {
+            currentMode = m;
+            renderModeSelector();
+            processAndRender();
+        };
+
         function updateClock() {
             const now = new Date();
             document.getElementById('current-time').innerText = now.toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
     </script>
+</body>
+</html>

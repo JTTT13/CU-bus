@@ -1,0 +1,107 @@
+[
+    {
+        "expected_duration_sec": 111,
+        "from_stop_id": "uni_station",
+        "id": "1A|uni_station|sports_centre",
+        "route_id": "1A",
+        "to_stop_id": "sports_centre"
+    },
+    {
+        "expected_duration_sec": 221,
+        "from_stop_id": "uni_station",
+        "id": "1A|uni_station|sir_run_run",
+        "route_id": "1A",
+        "to_stop_id": "sir_run_run"
+    },
+    {
+        "expected_duration_sec": 326,
+        "from_stop_id": "uni_station",
+        "id": "1A|uni_station|uni_admin_building",
+        "route_id": "1A",
+        "to_stop_id": "uni_admin_building"
+    },
+    {
+        "expected_duration_sec": 471,
+        "from_stop_id": "uni_station",
+        "id": "1A|uni_station|shho",
+        "route_id": "1A",
+        "to_stop_id": "shho"
+    },
+    {
+        "expected_duration_sec": 581,
+        "from_stop_id": "uni_station",
+        "id": "1A|uni_station|uni_station_terminal",
+        "route_id": "1A",
+        "to_stop_id": "uni_station_terminal"
+    },
+    {
+        "expected_duration_sec": 110,
+        "from_stop_id": "sports_centre",
+        "id": "1A|sports_centre|sir_run_run",
+        "route_id": "1A",
+        "to_stop_id": "sir_run_run"
+    },
+    {
+        "expected_duration_sec": 215,
+        "from_stop_id": "sports_centre",
+        "id": "1A|sports_centre|uni_admin_building",
+        "route_id": "1A",
+        "to_stop_id": "uni_admin_building"
+    },
+    {
+        "expected_duration_sec": 360,
+        "from_stop_id": "sports_centre",
+        "id": "1A|sports_centre|shho",
+        "route_id": "1A",
+        "to_stop_id": "shho"
+    },
+    {
+        "expected_duration_sec": 470,
+        "from_stop_id": "sports_centre",
+        "id": "1A|sports_centre|uni_station_terminal",
+        "route_id": "1A",
+        "to_stop_id": "uni_station_terminal"
+    },
+    {
+        "expected_duration_sec": 105,
+        "from_stop_id": "sir_run_run",
+        "id": "1A|sir_run_run|uni_admin_building",
+        "route_id": "1A",
+        "to_stop_id": "uni_admin_building"
+    },
+    {
+        "expected_duration_sec": 250,
+        "from_stop_id": "sir_run_run",
+        "id": "1A|sir_run_run|shho",
+        "route_id": "1A",
+        "to_stop_id": "shho"
+    },
+    {
+        "expected_duration_sec": 360,
+        "from_stop_id": "sir_run_run",
+        "id": "1A|sir_run_run|uni_station_terminal",
+        "route_id": "1A",
+        "to_stop_id": "uni_station_terminal"
+    },
+    {
+        "expected_duration_sec": 145,
+        "from_stop_id": "uni_admin_building",
+        "id": "1A|uni_admin_building|shho",
+        "route_id": "1A",
+        "to_stop_id": "shho"
+    },
+    {
+        "expected_duration_sec": 255,
+        "from_stop_id": "uni_admin_building",
+        "id": "1A|uni_admin_building|uni_station_terminal",
+        "route_id": "1A",
+        "to_stop_id": "uni_station_terminal"
+    },
+    {
+        "expected_duration_sec": 110,
+        "from_stop_id": "shho",
+        "id": "1A|shho|uni_station_terminal",
+        "route_id": "1A",
+        "to_stop_id": "uni_station_terminal"
+    }
+]

@@ -25,6 +25,7 @@ def export_data():
         SELECT 
             s.stop_id,
             s.arrival_time,
+            r.id as route_id,
             r.name_zh as route_name,
             r.operating_day_type as day_type,
             r.remarks_zh as note
@@ -35,9 +36,17 @@ def export_data():
     cursor.execute(query)
     arrivals = [dict(row) for row in cursor.fetchall()]
 
+    # 讀取路段時間數據
+    times_file = os.path.join(SCRIPT_DIR, 'TIME.json')
+    route_times = []
+    if os.path.exists(times_file):
+        with open(times_file, 'r', encoding='utf-8') as f:
+            route_times = json.load(f)
+
     final_data = {
         "stops": stops,
-        "arrivals": arrivals
+        "arrivals": arrivals,
+        "route_times": route_times
     }
 
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:

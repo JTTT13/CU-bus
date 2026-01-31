@@ -1,213 +1,301 @@
 <!DOCTYPE html>
-<html lang="zh-HK">
+<html lang="zh-HK" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CUHK Bus Vibe - 車站查詢</title>
+    <title>BusVibe Pro | Enterprise Transit Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Inter', 'system-ui'], mono: ['JetBrains Mono'] },
+                    boxShadow: {
+                        'apple': '0 8px 30px rgb(0,0,0,0.04)',
+                        'apple-dark': '0 8px 30px rgb(0,0,0,0.2)'
+                    },
+                    colors: {
+                        apple: { gray: '#F5F5F7', dark: '#1D1D1F', accent: '#007AFF' }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        body { -webkit-tap-highlight-color: transparent; }
+        body { -webkit-tap-highlight-color: transparent; font-feature-settings: "cv02", "cv03", "cv04", "cv11"; }
+        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
+        .dark .glass { background: rgba(29, 29, 31, 0.75); }
+        .apple-card { @apply bg-white/70 dark:bg-apple-dark/60 border border-white/20 dark:border-white/5 shadow-apple transition-all duration-300 ease-in-out; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+        
+        .sticky-panel { position: sticky; top: 80px; z-index: 40; }
+        @media (max-width: 767px) {
+            .sticky-panel { margin: 0; padding: 1rem 0; border-bottom: none; background: transparent; }
+        }
+
+        .bus-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem; }
+        @media (max-width: 640px) { .bus-card-grid { grid-template-columns: 1fr; gap: 1rem; } }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen">
+<body class="bg-apple-gray dark:bg-[#000000] text-slate-900 dark:text-slate-100 min-h-screen font-sans antialiased tracking-tight">
 
-    <!-- Header -->
-    <div class="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-md shadow-sm z-50 px-4 pt-4 pb-2 border-b border-slate-100">
-        <div class="max-w-md mx-auto">
-            <div class="flex justify-between items-center mb-3">
-                <div>
-                    <h1 class="text-2xl font-black bg-gradient-to-r from-purple-700 to-blue-600 bg-clip-text text-transparent">
-                        CUHK Bus
-                    </h1>
-                    <p id="current-time" class="text-xs text-slate-400 font-mono">載入中...</p>
+    <!-- Navbar: Apple Style Glass Floating Bar -->
+    <nav class="sticky top-0 z-50 glass border-b border-black/[0.05] dark:border-white/[0.05] h-16">
+        <div class="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-8 h-8 bg-black dark:bg-white rounded-[10px] flex items-center justify-center text-white dark:text-black font-extrabold text-sm shadow-apple">B</div>
+                <div class="flex flex-col">
+                    <span class="text-[15px] font-semibold tracking-tight leading-tight">BusVibe <span class="opacity-50 font-medium">Pro</span></span>
+                    <span id="current-time" class="text-[11px] font-medium text-slate-400 leading-none mt-0.5">00:00:00</span>
                 </div>
-                <button onclick="loadData()" class="p-2 bg-slate-100 rounded-full active:scale-90 transition">🔄</button>
             </div>
-
-            <!-- 模式切換 -->
-            <div id="mode-selector" class="flex gap-2 mb-4">
-                <!-- 由 JS 填充 -->
-            </div>
-
-            <!-- 車站選擇 (橫向捲動) -->
-            <p class="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-widest">選擇車站 Select Stop</p>
-            <div id="filter-container" class="flex gap-2 overflow-x-auto no-scrollbar pb-2">
-                <!-- 由 JS 填充 -->
+            <div class="flex items-center gap-3">
+                <button onclick="toggleDarkMode()" class="p-2 hover:bg-black/[0.05] dark:hover:bg-white/[0.1] rounded-full transition-all">
+                    <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-600 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"></svg>
+                </button>
+                <button onclick="toggleLang()" id="lang-btn" class="text-[11px] font-bold px-3 py-1.5 bg-black/[0.05] dark:bg-white/[0.1] rounded-full hover:bg-black/[0.1] dark:hover:bg-white/[0.2] transition-all">EN</button>
+                <button onclick="loadData()" id="refresh-btn" class="p-2 bg-black dark:bg-white text-white dark:text-black rounded-full transition-all active:scale-90 shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                </button>
             </div>
         </div>
-    </div>
+    </nav>
 
-    <!-- 列表 -->
-    <div class="pt-48 pb-10 px-4 max-w-md mx-auto">
-        <div id="bus-list" class="space-y-3">
-            <!-- 預設顯示載入中 -->
-            <div class="text-center py-20 text-slate-300 animate-pulse">正在讀取校巴資料...</div>
+    <main class="max-w-7xl mx-auto px-4 py-3 md:py-6">
+        <div class="flex flex-col md:flex-row gap-4 lg:gap-6">
+            
+            <!-- Sidebar: Clean Apple Layout -->
+            <aside class="w-full md:w-80 shrink-0">
+                <div class="sticky-panel space-y-6">
+                    <!-- Segmented Control (iOS Style) -->
+                    <div id="mode-selector" class="flex p-1 bg-black/[0.05] dark:bg-white/[0.1] rounded-[12px] backdrop-blur-md"></div>
+
+                    <!-- Stop Selector Card -->
+                    <div class="apple-card rounded-[24px] overflow-hidden">
+                        <button onclick="toggleStopList()" class="w-full py-4 px-5 flex items-center justify-between md:hidden transition-colors">
+                            <div class="flex items-center gap-3">
+                                <div class="w-2 h-2 rounded-full bg-apple-accent shadow-[0_0_8px_rgba(0,122,255,0.5)]"></div>
+                                <span id="mobile-current-stop" class="font-semibold text-sm text-slate-900 dark:text-white">Select Stop</span>
+                            </div>
+                            <svg id="stop-chevron" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>
+                        </button>
+
+                        <div id="stop-list-container" class="hidden md:block">
+                            <div class="p-4 border-b border-black/[0.03] dark:border-white/[0.03]">
+                                <input type="text" id="stop-search" oninput="renderStopGrid()" placeholder="Search..." class="w-full bg-black/[0.03] dark:bg-white/[0.05] text-[13px] px-4 py-2 rounded-[12px] outline-none focus:ring-2 ring-apple-accent/20 transition-all">
+                            </div>
+                            <div id="stop-grid" class="max-h-[300px] md:max-h-[60vh] overflow-y-auto custom-scrollbar p-2 space-y-1"></div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <section class="flex-1 space-y-3">
+                <div class="flex items-center justify-between px-1">
+                    <div class="flex items-center gap-2">
+                        <h2 id="arrival-title" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Arrivals</h2>
+                        <span id="selected-stop-name" class="hidden md:inline-block text-[10px] font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800">---</span>
+                    </div>
+                </div>
+                <div id="bus-list" class="bus-card-grid"></div>
+            </section>
         </div>
-        
-        <div class="text-center text-[10px] text-slate-300 mt-10">
-            數據來自校巴資料庫 • Static JSON Mode
-        </div>
-    </div>
+    </main>
 
     <script>
         const DATA_URL = 'bus_data.json';
-        let db = { stops: [], arrivals: [] };
-        let currentStopId = '';
-        let currentMode = new Date().getDay() === 0 ? 'sunday' : 'weekday';
+        const SETTINGS_KEY = 'cuhk_bus_vibe_settings';
+        let db = { stops: [], arrivals: [], route_times: [] };
 
-        window.onload = function() {
-            renderModeSelector();
-            updateClock();
-            setInterval(updateClock, 1000);
-            loadData();
-            setInterval(loadData, 60000); // 每一分鐘自動刷新
+        const urlParams = new URLSearchParams(window.location.search);
+        let mockTime = urlParams.get('time');
+
+        let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {
+            stopId: '', lang: 'zh', isDark: window.matchMedia('(prefers-color-scheme: dark)').matches, mode: (new Date().getDay() === 0) ? 'sunday' : 'weekday'
         };
 
-        function loadData() {
-            fetch(DATA_URL + '?t=' + Date.now())
-                .then(res => {
-                    if (!res.ok) throw new Error("找不到 bus_data.json");
-                    return res.json();
-                })
-                .then(data => {
-                    db = data;
-                    // 如果目前沒選車站，預設選第一個
-                    if (!currentStopId && db.stops && db.stops.length > 0) {
-                        currentStopId = db.stops[0].id;
-                    }
-                    renderStopSelector();
-                    processAndRender();
-                })
-                .catch(err => {
-                    console.error(err);
-                    document.getElementById('bus-list').innerHTML = `
-                        <div class="text-center py-20 bg-white rounded-2xl border border-red-100">
-                            <p class="text-red-500 font-bold">資料加載失敗</p>
-                            <p class="text-xs text-slate-400 mt-2">請確保 bus_data.json 已上傳至伺服器</p>
-                        </div>`;
-                });
+        let { stopId: currentStopId, lang, isDark, mode: currentMode } = settings;
+        let isStopListOpen = false, expandedTripId = null;
+
+        const i18n = {
+            zh: { weekday: '平日/教學日', sunday: '假日/週日', arrival: '實時到站', empty: '當前時段無班次', arrived: '已抵達', soon: '即將', unit: '分', search: '搜尋車站...', next: '後續車站 (預計)', term: '終點站' },
+            en: { weekday: 'Weekday', sunday: 'Weekend/Holiday', arrival: 'Real-time Arrivals', empty: 'No service at this time', arrived: 'Arrived', soon: 'Soon', unit: 'min', search: 'Search stops...', next: 'Trip Timeline', term: 'Terminus' }
+        };
+
+        window.onload = () => {
+            document.documentElement.classList.toggle('dark', isDark);
+            updateThemeIcon();
+            document.getElementById('lang-btn').innerText = (lang === 'zh') ? 'EN' : '中文';
+            updateClock(); setInterval(updateClock, 1000); loadData(); setInterval(loadData, 30000);
+        };
+
+        function getNow() {
+            if (!mockTime) return new Date();
+            const [h, m] = mockTime.split(':');
+            const d = new Date(); d.setHours(parseInt(h), parseInt(m), 0); return d;
         }
 
-        function renderStopSelector() {
-            const container = document.getElementById('filter-container');
-            if (!db.stops) return;
+        function saveSettings() {
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify({ stopId: currentStopId, lang, isDark, mode: currentMode }));
+        }
+
+        function toggleDarkMode() { isDark = !isDark; document.documentElement.classList.toggle('dark', isDark); updateThemeIcon(); saveSettings(); }
+        function updateThemeIcon() {
+            document.getElementById('theme-icon').innerHTML = isDark ? '<path stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 9h-1m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />' : '<path stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />';
+        }
+
+        function toggleLang() { lang = (lang === 'zh') ? 'en' : 'zh'; document.getElementById('lang-btn').innerText = (lang === 'zh') ? 'EN' : '中文'; document.getElementById('stop-search').placeholder = i18n[lang].search; renderAll(); saveSettings(); }
+
+        function loadData() {
+            const btn = document.getElementById('refresh-btn');
+            btn.classList.add('animate-spin');
+            if (db.stops.length === 0) document.getElementById('bus-list').innerHTML = Array(4).fill(0).map(() => `<div class="h-14 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 animate-pulse"></div>`).join('');
             
-            container.innerHTML = db.stops.map(stop => `
-                <button onclick="setStop('${stop.id}')" 
-                    class="px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all border
-                    ${currentStopId === stop.id 
-                        ? 'bg-slate-800 text-white border-slate-800 shadow-md' 
-                        : 'bg-white text-slate-500 border-slate-200'}">
-                    ${stop.name_zh}
+            fetch(DATA_URL + '?t=' + Date.now()).then(res => res.json()).then(data => {
+                db = data; btn.classList.remove('animate-spin');
+                if (!db.stops.some(s => s.id === currentStopId) && db.stops.length > 0) currentStopId = db.stops[0].id;
+                renderAll();
+            }).catch(() => btn.classList.remove('animate-spin'));
+        }
+
+        function renderAll() { renderModeSelector(); renderStopGrid(); processAndRender(); updateStopLabels(); }
+
+        function updateStopLabels() {
+            const stop = db.stops.find(s => s.id === currentStopId);
+            const name = stop ? (lang === 'zh' ? stop.name_zh : stop.name_en) : '---';
+            document.getElementById('mobile-current-stop').innerText = name;
+            document.getElementById('selected-stop-name').innerText = name;
+            document.getElementById('arrival-title').innerText = i18n[lang].arrival;
+        }
+
+        function renderModeSelector() {
+            const modes = ['weekday', 'sunday'];
+            document.getElementById('mode-selector').innerHTML = modes.map(m => `
+                <button onclick="changeMode('${m}')" class="flex-1 py-1.5 text-[12px] font-semibold rounded-[9px] transition-all duration-300 ${currentMode === m ? 'bg-white dark:bg-[#3A3A3C] text-black dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'}">
+                    ${i18n[lang][m]}
                 </button>
             `).join('');
         }
 
-        window.setStop = function(id) {
-            currentStopId = id;
-            renderStopSelector();
-            processAndRender();
-            try { window.scrollTo({top: 0, behavior: 'smooth'}); } catch(e){}
+        function renderStopGrid() {
+            const query = document.getElementById('stop-search').value.toLowerCase();
+            const container = document.getElementById('stop-grid');
+            container.innerHTML = db.stops.filter(s => s.name_zh.toLowerCase().includes(query) || s.name_en.toLowerCase().includes(query)).map(stop => `
+                <button onclick="setStop('${stop.id}')" class="w-full px-4 py-2.5 rounded-[12px] text-[13px] font-medium text-left transition-all ${currentStopId === stop.id ? 'bg-apple-accent text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:bg-black/[0.03] dark:hover:bg-white/[0.05]'}">
+                    ${lang === 'zh' ? stop.name_zh : stop.name_en}
+                </button>
+            `).join('');
+        }
+
+        window.toggleStopList = () => {
+            isStopListOpen = !isStopListOpen;
+            document.getElementById('stop-list-container').classList.toggle('hidden', !isStopListOpen);
+            document.getElementById('stop-chevron').classList.toggle('rotate-180', isStopListOpen);
         };
+
+        window.setStop = (id) => { currentStopId = id; if (window.innerWidth < 768) toggleStopList(); expandedTripId = null; renderAll(); saveSettings(); };
+        window.changeMode = (m) => { currentMode = m; expandedTripId = null; renderAll(); saveSettings(); };
+        window.toggleTripDetails = (id) => { expandedTripId = (expandedTripId === id) ? null : id; processAndRender(); };
+
+        function formatTime(t) { return t.split(':').slice(0, 2).join(':'); }
+
+        function renderTimeline(bus) {
+            if (!db.route_times) return '';
+            const steps = db.route_times.filter(t => t.route_id === bus.route_id);
+            let baseSec = -1;
+            const asToStop = steps.find(s => s.to_stop_id === bus.stop_id);
+            if (asToStop) baseSec = asToStop.expected_duration_sec;
+            else if (steps.some(s => s.from_stop_id === bus.stop_id)) baseSec = 0;
+            if (baseSec === -1) return `<div class="mt-2 py-2 text-[10px] text-slate-400 italic text-center border-t border-slate-100 dark:border-slate-800">${i18n[lang].term}</div>`;
+            const nextSteps = steps.filter(s => s.expected_duration_sec > baseSec).sort((a, b) => a.expected_duration_sec - b.expected_duration_sec);
+            
+            return `
+                <div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
+                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">${i18n[lang].next}</p>
+                    <div class="space-y-1 px-1">
+                        ${nextSteps.map(step => {
+                            const baseDate = getNow();
+                            const [h, m, s] = bus.arrival_time.split(':').map(Number);
+                            const arrivalDate = new Date(baseDate.setHours(h, m, s || 0, 0));
+                            arrivalDate.setSeconds(arrivalDate.getSeconds() + (step.expected_duration_sec - baseSec));
+                            const est = arrivalDate.toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit', hour12: false });
+                            const sObj = db.stops.find(x => x.id === step.to_stop_id);
+                            return `
+                            <div class="flex justify-between items-center group">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 group-hover:bg-indigo-400 transition-colors"></div>
+                                    <span class="text-[11px] font-medium text-slate-600 dark:text-slate-400">${sObj ? (lang === 'zh' ? sObj.name_zh : sObj.name_en) : step.to_stop_id}</span>
+                                </div>
+                                <span class="text-[10px] font-mono font-bold text-slate-400 group-hover:text-indigo-500">${est}</span>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>`;
+        }
 
         function processAndRender() {
             const listDiv = document.getElementById('bus-list');
-            const now = new Date();
+            const now = getNow();
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-            if (!db.arrivals) return;
-
             const filtered = db.arrivals.filter(arr => {
                 if (arr.stop_id !== currentStopId) return false;
-
-                // 模式判斷
                 const dt = arr.day_type || "";
-                let isModeMatch = false;
-                if (currentMode === 'weekday') {
-                    if (dt.includes('MON') || dt === 'N' || dt === "") isModeMatch = true;
-                } else {
-                    if (dt.includes('SUN') || dt.includes('HOLIDAY') || dt === 'N') isModeMatch = true;
-                }
-                if (!isModeMatch) return false;
+                let isMatch = (currentMode === 'weekday') ? (dt.includes('MON') || dt === 'N' || dt === "") : (dt.includes('SUN') || dt.includes('HOLIDAY') || dt === 'N');
+                if (!isMatch) return false;
+                const p = arr.arrival_time.split(':').map(Number);
+                let totalMin = p[0] * 60 + p[1];
+                arr.diff = totalMin - currentMinutes;
+                return arr.diff >= -1 && arr.diff <= 60;
+            }).sort((a, b) => a.diff - b.diff);
 
-                // 時間計算
-                const [h, m] = arr.arrival_time.split(':').map(Number);
-                arr.totalMin = h * 60 + m;
-                arr.diff = arr.totalMin - currentMinutes;
-                arr.displayTime = arr.arrival_time.substring(0, 5);
-
-                // 只顯示未來 180 分鐘內的車
-                return arr.diff >= -1 && arr.diff <= 180;
-            });
-
-            // 排序
-            filtered.sort((a, b) => a.diff - b.diff);
-
-            if (filtered.length === 0) {
-                listDiv.innerHTML = `
-                    <div class="text-center py-20 bg-white rounded-3xl border border-slate-100">
-                        <p class="text-4xl mb-4">😴</p>
-                        <p class="text-slate-500 font-bold">目前暫無班次</p>
-                        <p class="text-xs text-slate-400">請嘗試切換模式或車站</p>
-                    </div>`;
-                return;
-            }
+            if (filtered.length === 0) { listDiv.innerHTML = `<div class="py-12 text-center text-slate-400 text-xs font-medium border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg">${i18n[lang].empty}</div>`; return; }
 
             listDiv.innerHTML = filtered.map(bus => {
-                let statusColor = 'text-emerald-600 bg-emerald-50';
-                let statusText = '分鐘';
+                const routeMatch = bus.route_name.match(/^[0-9A-Z]+/i);
+                const routeDisp = routeMatch ? routeMatch[0] : bus.route_name.split(' ')[0];
+                const tripId = `${bus.route_id}-${bus.stop_id}-${bus.arrival_time}`;
+                const isExpanded = expandedTripId === tripId;
                 
-                if (bus.diff <= 0) {
-                    statusColor = 'text-slate-400 bg-slate-50';
-                    statusText = '已抵達';
-                } else if (bus.diff <= 5) {
-                    statusColor = 'text-rose-600 bg-rose-50 animate-pulse font-bold';
-                    statusText = '即將抵達';
+                let statusCls = 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/30';
+                let timeLabel = i18n[lang].unit, displayDiff = bus.diff;
+
+                if (bus.diff <= 0) { 
+                    statusCls = 'text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'; 
+                    timeLabel = i18n[lang].arrived; displayDiff = '--'; 
+                } else if (bus.diff <= 5) { 
+                    statusCls = 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-800/30 font-bold'; 
+                    timeLabel = i18n[lang].soon;
                 }
 
                 return `
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center transition-all active:scale-95">
-                    <div class="flex items-center gap-4">
-                        <div class="bg-slate-800 text-white font-bold w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-inner">
-                            ${bus.route_name}
+                <div onclick="toggleTripDetails('${tripId}')" class="apple-card rounded-[24px] px-5 py-4 cursor-pointer active:scale-[0.98] ${isExpanded ? 'ring-2 ring-apple-accent/20 border-apple-accent/30' : ''}">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 shrink-0 bg-black dark:bg-white rounded-[14px] flex items-center justify-center text-white dark:text-black font-black text-sm shadow-apple">${routeDisp}</div>
+                            <div class="flex flex-col">
+                                <span class="text-lg font-bold tracking-tighter text-slate-900 dark:text-white leading-none">${formatTime(bus.arrival_time)}</span>
+                                <span class="text-[11px] font-medium text-slate-400 mt-1.5 uppercase tracking-wide opacity-80">${bus.route_name}</span>
+                            </div>
                         </div>
-                        <div>
-                            <div class="font-bold text-slate-700 text-lg leading-tight">${bus.displayTime}</div>
-                            <div class="text-[10px] text-slate-400 mt-1 font-medium">${bus.note || '正常班次'}</div>
+                        <div class="px-4 py-2 rounded-[16px] ${statusCls.replace('border-indigo-100', 'border-transparent')} text-center min-w-[70px]">
+                            <div class="text-lg font-black leading-none">${displayDiff}</div>
+                            <div class="text-[9px] font-bold uppercase mt-1 opacity-70">${timeLabel}</div>
                         </div>
                     </div>
-                    <div class="px-4 py-2 rounded-xl text-right ${statusColor} min-w-[80px]">
-                        <div class="text-2xl font-black leading-none">${bus.diff <= 0 ? '--' : bus.diff}</div>
-                        <div class="text-[10px] opacity-80 mt-1 font-bold">${statusText}</div>
-                    </div>
-                </div>
-                `;
+                    ${isExpanded ? `<div class="mt-4 px-1 animate-in fade-in slide-in-from-top-2 duration-300">${renderTimeline(bus)}</div>` : ''}
+                </div>`;
             }).join('');
         }
 
-        function renderModeSelector() {
-            const container = document.getElementById('mode-selector');
-            container.innerHTML = `
-                <button onclick="changeMode('weekday')" class="flex-1 py-2 text-xs font-bold rounded-xl border transition-all ${currentMode === 'weekday' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-slate-400 border-slate-200'}">
-                    平日/教學日
-                </button>
-                <button onclick="changeMode('sunday')" class="flex-1 py-2 text-xs font-bold rounded-xl border transition-all ${currentMode === 'sunday' ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-white text-slate-400 border-slate-200'}">
-                    假日/星期日
-                </button>
-            `;
-        }
-
-        window.changeMode = function(m) {
-            currentMode = m;
-            renderModeSelector();
-            processAndRender();
-        };
-
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('current-time').innerText = now.toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        function updateClock() { 
+            const now = getNow();
+            const timeStr = now.toLocaleTimeString('zh-HK', { hour12: false });
+            document.getElementById('current-time').innerHTML = mockTime ? `<span class="text-rose-500 font-bold">MOCK: ${timeStr}</span>` : timeStr;
         }
     </script>
 </body>

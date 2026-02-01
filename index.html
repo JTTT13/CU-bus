@@ -49,8 +49,8 @@
 
         .bus-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem; }
         @media (max-width: 640px) { .bus-card-grid { grid-template-columns: 1fr; gap: 1rem; } }
-        /* [Fix E] iOS Safe Area Support */
-        .pb-safe-area { padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
+        /* [Fix E] iOS Safe Area Support - Increased padding for bottom sheet */
+        .pb-safe-area { padding-bottom: calc(2.5rem + env(safe-area-inset-bottom)); }
         
         /* [Apple Hierarchy] Navbar 必須最高 */
         nav.sticky { z-index: 100; }
@@ -102,6 +102,8 @@
 
     <!-- Navbar: Apple Style Glass Floating Bar -->
     <nav class="sticky top-0 z-[100] glass border-b border-black/[0.05] dark:border-white/[0.05] h-16">
+        <!-- Stage 3: Refresh Progress Bar -->
+        <div class="absolute bottom-0 left-0 h-[2px] bg-apple-accent transition-all duration-[1000ms] ease-linear" id="refresh-bar" style="width: 0%"></div>
         <div class="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <div class="w-8 h-8 bg-black dark:bg-white rounded-[10px] flex items-center justify-center text-white dark:text-black font-extrabold text-sm shadow-apple">B</div>
@@ -255,7 +257,12 @@
         let mockTime = urlParams.get('time');
 
         let isStopListOpen = false, expandedTripId = null;
-        let isFirstLoad = true; // [Feature] Flag for auto-gps
+        let isFirstLoad = true;
+        let fetchController = null;
+        let lastCheckedDay = new Date().getDay(); // [Fix] Midnight auto-refresh
+        let userPos = null; // [Stage 2] Store GPS
+        let refreshTimer = 0; // [Stage 3] Countdown
+        const REFRESH_INTERVAL = 30;
 
         // [Fix C] Haversine Formula for accurate distance
         function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
@@ -292,12 +299,14 @@
             // [Fix FOUC] Removed redundant class toggle, handled in head
             updateThemeIcon();
             document.getElementById('lang-btn').innerText = (lang === 'zh') ? 'EN' : '中文';
-            updateClock(); setInterval(updateClock, 1000);
-            loadData(); setInterval(loadData, 30000);
+            updateClock();
+            setInterval(updateClock, 1000);
+            setInterval(updateRefreshUI, 1000); // Stage 3 Ticker
+            loadData();
             
-            // [Fix Ghost Scroll] Only update arrivals, NOT the stop list structure
+            // Client-side ticker to update relative times (e.g. "2 min" -> "1 min") without fetching
             setInterval(() => {
-                if (db.stops.length > 0) processAndRender(); 
+                if (db.stops.length > 0) processAndRender();
             }, 5000);
             
             // [Fix Resize Lock] Handle window resize to unlock scroll
@@ -325,31 +334,45 @@
 
         function toggleLang() { lang = (lang === 'zh') ? 'en' : 'zh'; document.getElementById('lang-btn').innerText = (lang === 'zh') ? 'EN' : '中文'; document.getElementById('stop-search').placeholder = i18n[lang].search; renderAll(); saveSettings(); }
 
-        async function loadData() {
+        function updateRefreshUI() {
+            refreshTimer++;
+            const percent = (refreshTimer / REFRESH_INTERVAL) * 100;
+            document.getElementById('refresh-bar').style.width = `${percent}%`;
+            if (refreshTimer >= REFRESH_INTERVAL) {
+                loadData(true);
+            }
+        }
+
+        async function loadData(isAutoRefresh = false) {
+            refreshTimer = 0; // Reset timer on any load
+            document.getElementById('refresh-bar').style.width = `0%`;
+            
+            if (fetchController) fetchController.abort();
+            fetchController = new AbortController();
+            const signal = fetchController.signal;
+
             const btn = document.getElementById('refresh-btn');
-            btn.classList.add('animate-spin');
+            if (!isAutoRefresh) btn.classList.add('animate-spin');
+            
+            // Skeleton only on very first empty load
             if (db.stops.length === 0) document.getElementById('bus-list').innerHTML = Array(4).fill(0).map(() => `<div class="h-14 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 animate-pulse"></div>`).join('');
             
             try {
-                // [Feature] Fetch both bus data and route details (route.json loaded once)
-                const busPromise = fetch(DATA_URL + '?t=' + Date.now()).then(r => r.json());
-                const routePromise = (db.routes.length === 0) ? fetch('route.json').then(r => r.json()) : Promise.resolve(null);
+                const busPromise = fetch(DATA_URL + '?t=' + Date.now(), { signal }).then(r => r.json());
+                const routePromise = (db.routes.length === 0) ? fetch('route.json', { signal }).then(r => r.json()) : Promise.resolve(null);
                 
                 const [busData, routeData] = await Promise.all([busPromise, routePromise]);
                 
-                // Merge data
                 db.stops = busData.stops;
                 db.arrivals = busData.arrivals;
                 db.route_times = busData.route_times;
                 if (routeData) db.routes = routeData;
 
                 btn.classList.remove('animate-spin');
-                // 成功刷新後的反饋
-                if (!isFirstLoad && navigator.vibrate) navigator.vibrate(10);
+                if (!isFirstLoad && !isAutoRefresh && navigator.vibrate) navigator.vibrate(10);
                 
                 if (!db.stops.some(s => s.id === currentStopId) && db.stops.length > 0) currentStopId = db.stops[0].id;
                 
-                // [Fix] 只有在用戶還沒手動選擇（currentStopId 為空或預設）時才自動定位
                 if (isFirstLoad) {
                     isFirstLoad = false;
                     const hasUserPreference = localStorage.getItem(SETTINGS_KEY) && JSON.parse(localStorage.getItem(SETTINGS_KEY)).stopId;
@@ -358,16 +381,26 @@
                             if (result.state === 'granted') findNearestStop(true);
                         });
                     }
+                    renderAll(true); // First load needs full render
+                } else {
+                    renderAll(false); // Subsequent loads don't rebuild stop grid (prevents scroll jump)
                 }
-
-                renderAll();
             } catch (e) {
-                console.error(e);
-                btn.classList.remove('animate-spin');
+                if (e.name !== 'AbortError') {
+                    console.error(e);
+                    btn.classList.remove('animate-spin');
+                }
             }
         }
 
-        function renderAll() { renderModeSelector(); renderStopGrid(); processAndRender(); updateStopLabels(); }
+        // [Fix] fullRebuild defaults to true to maintain old behavior for manual interactions
+        function renderAll(fullRebuild = true) {
+            renderModeSelector();
+            // Only rebuild the stop grid DOM if requested (avoids resetting scroll/input focus)
+            if (fullRebuild) renderStopGrid();
+            processAndRender();
+            updateStopLabels();
+        }
 
         function updateStopLabels() {
             const stop = db.stops.find(s => s.id === currentStopId);
@@ -392,7 +425,13 @@
             const now = getNow();
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-            // 1. 預先計算每個站點的班次數量 (未來60分鐘)
+            // Stage 4: Map routes to stops for better search
+            const stopRoutesMap = {};
+            db.arrivals.forEach(arr => {
+                if (!stopRoutesMap[arr.stop_id]) stopRoutesMap[arr.stop_id] = new Set();
+                stopRoutesMap[arr.stop_id].add(arr.route_name.toLowerCase());
+            });
+
             const busCounts = {};
             db.arrivals.forEach(arr => {
                 const dt = arr.day_type || "";
@@ -407,8 +446,25 @@
                 }
             });
 
-            // 2. 篩選與渲染列表
-            const filteredStops = db.stops.filter(s => s.name_zh.toLowerCase().includes(query) || s.name_en.toLowerCase().includes(query));
+            // Stage 2 & 4: Enhanced Filter & Sort
+            let filteredStops = db.stops.filter(s => {
+                const nameMatch = s.name_zh.toLowerCase().includes(query) || s.name_en.toLowerCase().includes(query);
+                const routeMatch = stopRoutesMap[s.id] && Array.from(stopRoutesMap[s.id]).some(r => r.includes(query));
+                return nameMatch || routeMatch;
+            });
+
+            // Stage 2: Distance Calculation & Sorting
+            filteredStops = filteredStops.map(s => {
+                let dist = null;
+                if (userPos && s.lat && (s.long || s.lng)) {
+                    dist = getDistanceFromLatLonInKm(userPos.lat, userPos.lng, s.lat, s.long || s.lng);
+                }
+                return { ...s, distance: dist };
+            });
+
+            if (userPos) {
+                filteredStops.sort((a, b) => (a.distance || 999) - (b.distance || 999));
+            }
             
             if (filteredStops.length === 0 && query !== "") {
                 container.innerHTML = `<div class="py-8 text-center text-slate-400 text-xs">${lang === 'zh' ? '找不到相關車站' : 'No stops found'}</div>`;
@@ -424,9 +480,16 @@
                     ? (isSelected ? 'bg-white/30 text-white' : 'bg-apple-accent/10 text-apple-accent dark:bg-apple-accent/20')
                     : 'opacity-20 grayscale';
 
+                const distLabel = stop.distance
+                    ? `<span class="text-[9px] opacity-60 ml-2 font-normal">${stop.distance < 1 ? Math.round(stop.distance * 1000) + 'm' : stop.distance.toFixed(1) + 'km'}</span>`
+                    : '';
+
                 return `
                 <button onclick="setStop('${stop.id}', true)" class="w-full px-4 py-2.5 rounded-[12px] text-[13px] font-medium text-left transition-all flex items-center justify-between group ${isSelected ? 'bg-apple-accent text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:bg-black/[0.03] dark:hover:bg-white/[0.05]'}">
-                    <span class="truncate pr-2">${lang === 'zh' ? stop.name_zh : stop.name_en}</span>
+                    <div class="flex flex-col truncate pr-2">
+                        <span class="truncate">${lang === 'zh' ? stop.name_zh : stop.name_en}</span>
+                        ${distLabel}
+                    </div>
                     <span class="shrink-0 font-mono text-[10px] px-2 py-0.5 rounded-full transition-colors ${badgeClass}">
                         ${count}
                     </span>
@@ -482,6 +545,7 @@
 
             navigator.geolocation.getCurrentPosition((position) => {
                 const { latitude, longitude } = position.coords;
+                userPos = { lat: latitude, lng: longitude }; // Store for sorting
                 let minDistance = Infinity;
                 let nearestId = null;
 
@@ -623,8 +687,22 @@
             }).join('');
         }
 
-        function updateClock() { 
+        function updateClock() {
             const now = getNow();
+            
+            // [Fix] Midnight auto-refresh logic
+            const currentDay = now.getDay();
+            if (currentDay !== lastCheckedDay) {
+                lastCheckedDay = currentDay;
+                const newMode = (currentDay === 0) ? 'sunday' : 'weekday';
+                if (currentMode !== newMode) {
+                    currentMode = newMode;
+                    // Force full rebuild to update stop badges and mode selector
+                    renderAll(true);
+                    saveSettings();
+                }
+            }
+
             const timeStr = now.toLocaleTimeString('zh-HK', { hour12: false });
             document.getElementById('current-time').innerHTML = mockTime ? `<span class="text-rose-500 font-bold">MOCK: ${timeStr}</span>` : timeStr;
         }

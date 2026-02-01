@@ -15,8 +15,13 @@ def export_data():
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    # 1. 抓取所有車站
-    cursor.execute("SELECT id, name_zh, name_en FROM stop ORDER BY sorting_order")
+    # 1. 抓取所有車站 (確保欄位與提供的 JSON 一致使用 lat, long)
+    try:
+        cursor.execute("SELECT id, name_zh, name_en, lat, long FROM stop ORDER BY sorting_order")
+    except sqlite3.OperationalError:
+        # 如果你的資料庫欄位是 lng 而不是 long，這裡做個轉義
+        cursor.execute("SELECT id, name_zh, name_en, lat, lng AS long FROM stop ORDER BY sorting_order")
+    
     stops = [dict(row) for row in cursor.fetchall()]
 
     # 2. 抓取所有到站時間，並關聯路線資訊

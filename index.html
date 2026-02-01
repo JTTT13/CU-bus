@@ -81,14 +81,19 @@
         
         @media (max-width: 767px) {
             #route-modal-card {
-                position: fixed; bottom: 0; left: 0; right: 0;
+                position: fixed;
+                bottom: 0; left: 0; right: 0;
                 width: 100%;
-                height: auto; /* 改為自適應高度 */
-                max-height: 85vh; /* 防止內容過多超出螢幕 */
-                border-radius: 32px 32px 0 0;
-                transform: translateY(110%); /* 初始完全隱藏在底部 */
-                padding-bottom: env(safe-area-inset-bottom); /* 確保 iOS 底部安全區域 */
+                /* 確保不會撞到 16 (64px) 的 Navbar，保留一些間距 */
+                height: calc(100dvh - 80px);
+                max-height: calc(100dvh - 80px);
+                /* 更圓潤的 Apple Style 圓角 */
+                border-radius: 24px 24px 0 0;
+                transform: translateY(110%);
+                padding-bottom: env(safe-area-inset-bottom);
+                background: #F2F2F7;
             }
+            .dark #route-modal-card { background: #1C1C1E; }
             #route-modal.visible #route-modal-card { transform: translateY(0); }
             .dragging { transition: none !important; }
         }
@@ -107,7 +112,38 @@
             #route-modal.visible #route-modal-card { transform: translateX(0); }
         }
 
-        .info-pill { @apply bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.05] rounded-2xl p-4 flex flex-col gap-1; }
+        /* 1. 確保 pill 高度自適應並優化排版 */
+        .info-pill {
+            @apply bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.05] rounded-2xl p-4 flex flex-col gap-1;
+            height: auto;
+            min-height: min-content;
+        }
+        
+        /* 2. 增加 Modal 內容間距，使其更 user-friendly */
+        #route-modal-card .overflow-y-auto {
+            padding-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 12px; /* Apple Style 典型的元素間距 */
+        }
+
+        /* 3. 強化 Grabber 視覺 */
+        .apple-grabber {
+            width: 36px;
+            height: 5px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+        .dark .apple-grabber { background: rgba(255,255,255,0.15); }
+
+        /* Apple Style Single Spin */
+        @keyframes apple-rotation {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-apple-spin {
+            animation: apple-rotation 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
     </style>
 </head>
 <body class="bg-apple-gray dark:bg-[#000000] text-slate-900 dark:text-slate-100 min-h-screen font-sans antialiased tracking-tight">
@@ -174,7 +210,7 @@
                                 
                                 <!-- Drag Handle (Mobile Only) -->
                                 <div id="stop-list-handle" class="w-full h-8 flex items-center justify-center md:hidden shrink-0 cursor-grab active:cursor-grabbing">
-                                    <div class="w-9 h-1.5 bg-black/20 dark:bg-white/20 rounded-full"></div>
+                                    <div class="apple-grabber"></div>
                                 </div>
 
                                 <!-- Header Area -->
@@ -332,6 +368,7 @@
             
             // [Feature] Bottom Sheet Controller
             initBottomSheet('stop-list-sheet', 'stop-list-handle', () => toggleStopList(false));
+            // 對於 Route Modal，頂部區域作為 Handle
             initBottomSheet('route-modal-card', 'route-modal-card', () => closeRouteModal());
 
             // [Fix Resize Lock] Handle window resize to unlock scroll
@@ -380,7 +417,14 @@
             const signal = fetchController.signal;
 
             const btn = document.getElementById('refresh-btn');
-            if (!isAutoRefresh) btn.classList.add('animate-spin');
+            if (!isAutoRefresh) {
+                // 強制重啟動畫：先移除 class，觸發 reflow，再重新加入
+                btn.classList.remove('animate-apple-spin');
+                void btn.offsetWidth; // Trigger reflow
+                btn.classList.add('animate-apple-spin');
+                // 動畫結束後自動移除，以便下次點擊
+                setTimeout(() => btn.classList.remove('animate-apple-spin'), 800);
+            }
             
             // Skeleton only on very first empty load
             if (db.stops.length === 0) document.getElementById('bus-list').innerHTML = Array(4).fill(0).map(() => `<div class="h-14 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 animate-pulse"></div>`).join('');
@@ -396,7 +440,7 @@
                 db.route_times = busData.route_times;
                 if (routeData) db.routes = routeData;
 
-                btn.classList.remove('animate-spin');
+                // 動畫現在由 setTimeout 統一管理，不在此手動移除
                 if (!isFirstLoad && !isAutoRefresh && navigator.vibrate) navigator.vibrate(10);
                 
                 if (!db.stops.some(s => s.id === currentStopId) && db.stops.length > 0) currentStopId = db.stops[0].id;
@@ -416,7 +460,6 @@
             } catch (e) {
                 if (e.name !== 'AbortError') {
                     console.error(e);
-                    btn.classList.remove('animate-spin');
                 }
             }
         }
@@ -524,16 +567,17 @@
                     ? (isSelected ? 'bg-white/30 text-white' : 'bg-apple-accent/10 text-apple-accent dark:bg-apple-accent/20')
                     : 'opacity-20 grayscale';
 
+                // 使用 Apple SF Style 的距離顯示：更小、更淡、具備單位自動轉換
                 const distLabel = stop.distance
-                    ? `<span class="text-[9px] opacity-60 ml-2 font-normal">${stop.distance < 1 ? Math.round(stop.distance * 1000) + 'm' : stop.distance.toFixed(1) + 'km'}</span>`
+                    ? `<span class="text-[10px] font-semibold opacity-50 tracking-tight">${stop.distance < 1 ? Math.round(stop.distance * 1000) + ' m' : stop.distance.toFixed(1) + ' km'}</span>`
                     : '';
 
                 const hasBuses = count > 0;
                 return `
-                <button onclick="setStop('${stop.id}', true)" class="w-full px-4 py-2.5 rounded-[12px] text-[13px] font-medium text-left transition-all flex items-center justify-between group ${isSelected ? 'bg-apple-accent text-white shadow-md' : (hasBuses ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500')} hover:bg-black/[0.03] dark:hover:bg-white/[0.05]">
+                <button onclick="setStop('${stop.id}', true)" class="w-full px-5 py-3 rounded-[16px] text-[15px] font-semibold text-left transition-all flex items-center justify-between group ${isSelected ? 'bg-apple-accent text-white shadow-lg scale-[1.02]' : (hasBuses ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-600')} hover:bg-black/[0.04] dark:hover:bg-white/[0.06] mb-1">
                     <div class="flex flex-col truncate pr-2">
-                        <span class="truncate">${lang === 'zh' ? stop.name_zh : stop.name_en}</span>
-                        ${distLabel}
+                        <span class="truncate leading-tight">${lang === 'zh' ? stop.name_zh : stop.name_en}</span>
+                        <div class="mt-0.5">${distLabel}</div>
                     </div>
                     <span class="shrink-0 font-mono text-[10px] px-2 py-0.5 rounded-full transition-colors ${badgeClass}">
                         ${count}
@@ -835,60 +879,76 @@
 
         function initBottomSheet(sheetId, handleId, closeFn) {
             const sheet = document.getElementById(sheetId);
-            const handle = document.getElementById(handleId);
-            if (!sheet || !handle || window.innerWidth >= 768) return;
+            const scrollContent = sheet.querySelector('.overflow-y-auto');
+            if (!sheet || window.innerWidth >= 768) return;
 
-            let startY = 0, currentY = 0, initialTranslateY = 0;
+            let startY = 0;
+            let currentTranslateY = 0;
             let isDragging = false;
 
             const onTouchStart = (e) => {
-                // 只在手機版生效，且如果是在內容區域捲動則不觸發拖動
                 if (window.innerWidth >= 768) return;
-                
-                // 如果點擊的是 scrollable 的區域，且不在頂部，則不觸發拖動
-                const scrollable = e.target.closest('.overflow-y-auto');
-                if (scrollable && scrollable.scrollTop > 0) return;
-
                 startY = e.touches[0].clientY;
-                sheet.classList.add('dragging');
-                isDragging = true;
             };
 
             const onTouchMove = (e) => {
-                if (!isDragging) return;
+                if (window.innerWidth >= 768) return;
+                
                 const touchY = e.touches[0].clientY;
-                const deltaY = touchY - startY;
+                const isAtTop = scrollContent ? scrollContent.scrollTop <= 0 : true;
+                let deltaY = touchY - startY;
 
-                // 只允許向下拖動關閉
-                if (deltaY > 0) {
-                    sheet.style.transform = `translateY(${deltaY}px)`;
-                    // 根據拖動深度調整背景透明度 (Optional)
-                } else {
-                    // 向上拉時增加阻尼感
-                    sheet.style.transform = `translateY(${deltaY * 0.2}px)`;
+                // 核心邏輯：判斷是否該從「捲動內容」轉向「拖拽面板」
+                if (isAtTop && deltaY > 0) {
+                    // 如果是剛觸發拖拽，重新設定 startY，防止跳動
+                    if (!isDragging) {
+                        isDragging = true;
+                        startY = touchY; // 重置起點
+                        deltaY = 0;
+                        sheet.classList.add('dragging');
+                    }
+
+                    // 阻止原生捲動行為
+                    if (e.cancelable) e.preventDefault();
+                    
+                    // 下拉位移
+                    currentTranslateY = deltaY;
+                    sheet.style.transform = `translateY(${currentTranslateY}px)`;
+                } else if (isDragging && deltaY <= 0) {
+                    // 如果正在拖拽但轉向往上推，且還沒推回原位
+                    if (currentTranslateY > 0) {
+                        if (e.cancelable) e.preventDefault();
+                        currentTranslateY = Math.max(0, deltaY + currentTranslateY);
+                        sheet.style.transform = `translateY(${currentTranslateY}px)`;
+                    } else {
+                        // 回到原位，恢復正常捲動
+                        isDragging = false;
+                        sheet.classList.remove('dragging');
+                        sheet.style.transform = '';
+                    }
                 }
             };
 
             const onTouchEnd = (e) => {
                 if (!isDragging) return;
-                sheet.classList.remove('dragging');
-                isDragging = false;
-
+                
                 const touchY = e.changedTouches[0].clientY;
                 const deltaY = touchY - startY;
+                
+                isDragging = false;
+                sheet.classList.remove('dragging');
+                sheet.style.transform = ''; // 交給 CSS transition 處理
 
-                // 清除行內樣式讓 CSS Transition 接手
-                sheet.style.transform = '';
-
-                // 如果下滑超過 120px 或是速度夠快，則關閉
-                if (deltaY > 120) {
+                // 門檻值：下滑超過 100px 則關閉
+                if (deltaY > 100) {
                     closeFn();
                 }
             };
 
-            handle.addEventListener('touchstart', onTouchStart, { passive: true });
-            window.addEventListener('touchmove', onTouchMove, { passive: false });
-            window.addEventListener('touchend', onTouchEnd);
+            // 監聽整個 Sheet 的觸控，但邏輯內部判斷是否要接管
+            sheet.addEventListener('touchstart', onTouchStart, { passive: true });
+            sheet.addEventListener('touchmove', onTouchMove, { passive: false });
+            sheet.addEventListener('touchend', onTouchEnd);
         }
 
         // Close on Escape key

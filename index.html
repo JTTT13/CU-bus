@@ -35,6 +35,7 @@
     </script>
     <style>
         body { -webkit-tap-highlight-color: transparent; font-feature-settings: "cv02", "cv03", "cv04", "cv11"; }
+        #modal-route-icon { font-size: clamp(1.2rem, 5vw, 1.5rem); }
         .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
         .dark .glass { background: rgba(29, 29, 31, 0.75); }
         .apple-card { @apply bg-white/70 dark:bg-apple-dark/60 border border-white/20 dark:border-white/5 shadow-apple transition-all duration-300 ease-in-out; }
@@ -55,44 +56,55 @@
         /* [Apple Hierarchy] Navbar 必須最高 */
         nav.sticky { z-index: 100; }
 
-        /* [Smooth Backdrop] 這裡使用更細緻的 Blur 轉場 */
+        /* [Route Modal] 修正：基礎狀態需包含過渡屬性 */
         #route-modal {
-            transition: opacity 0.5s cubic-bezier(0.28, 0.11, 0.32, 1);
-            backdrop-filter: blur(0px) saturate(100%);
-            -webkit-backdrop-filter: blur(0px) saturate(100%);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.4s ease, visibility 0.4s;
         }
-        #route-modal:not(.invisible) {
+        #route-modal.visible {
+            opacity: 1;
+            visibility: visible;
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
         }
 
-        /* [Fix] 防止背景滾動，移除 height: 100vh 以免破壞 sticky 定位 */
+        /* [Fix] 防止背景滾動 */
         body.modal-open { overflow: hidden; }
 
         /* [Drawer Styles] */
         #route-modal-card {
-            transition: transform 0.6s cubic-bezier(0.32, 0.72, 0, 1);
+            /* 這裡的動畫時間與曲線必須與 Stop List 一致 (0.5s) */
+            transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
             will-change: transform;
         }
         
         @media (max-width: 767px) {
             #route-modal-card {
                 position: fixed; bottom: 0; left: 0; right: 0;
-                width: 100%; height: 78vh; border-radius: 28px 28px 0 0;
-                transform: translateY(105%);
+                width: 100%;
+                height: auto; /* 改為自適應高度 */
+                max-height: 85vh; /* 防止內容過多超出螢幕 */
+                border-radius: 32px 32px 0 0;
+                transform: translateY(110%); /* 初始完全隱藏在底部 */
+                padding-bottom: env(safe-area-inset-bottom); /* 確保 iOS 底部安全區域 */
             }
-            #route-modal:not(.invisible) #route-modal-card { transform: translateY(0); }
+            #route-modal.visible #route-modal-card { transform: translateY(0); }
+            .dragging { transition: none !important; }
         }
 
         @media (min-width: 768px) {
-            #route-modal { justify-content: flex-end; padding: 1.5rem; top: 0; }
+            /* 桌面版改為垂直置中靠右的懸浮卡片 */
+            #route-modal { justify-content: flex-end; align-items: center; padding: 2rem; top: 0; }
             #route-modal-card {
-                height: calc(100vh - 3rem); width: 420px;
+                height: auto;
+                max-height: calc(100vh - 4rem);
+                width: 400px;
                 border-radius: 32px;
-                transform: translateX(110%);
-                box-shadow: -20px 0 60px rgba(0,0,0,0.1);
+                transform: translateX(120%); /* 初始隱藏在右側 */
+                box-shadow: -20px 0 80px rgba(0,0,0,0.15);
             }
-            #route-modal:not(.invisible) #route-modal-card { transform: translateX(0); }
+            #route-modal.visible #route-modal-card { transform: translateX(0); }
         }
 
         .info-pill { @apply bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.05] rounded-2xl p-4 flex flex-col gap-1; }
@@ -105,20 +117,29 @@
         <!-- Stage 3: Refresh Progress Bar -->
         <div class="absolute bottom-0 left-0 h-[2px] bg-apple-accent transition-all duration-[1000ms] ease-linear" id="refresh-bar" style="width: 0%"></div>
         <div class="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <div class="w-8 h-8 bg-black dark:bg-white rounded-[10px] flex items-center justify-center text-white dark:text-black font-extrabold text-sm shadow-apple">B</div>
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-black dark:bg-white rounded-[10px] flex items-center justify-center text-white dark:text-black font-[900] text-lg tracking-tighter shadow-apple">CU</div>
                 <div class="flex flex-col">
-                    <span class="text-[15px] font-semibold tracking-tight leading-tight">BusVibe <span class="opacity-50 font-medium">Pro</span></span>
-                    <span id="current-time" class="text-[11px] font-medium text-slate-400 leading-none mt-0.5">00:00:00</span>
+                    <span class="text-[16px] font-extrabold tracking-tight leading-tight">BUS</span>
+                    <span id="current-time" class="text-[10px] font-bold text-slate-400 leading-none mt-0.5 font-mono">00:00:00</span>
                 </div>
             </div>
-            <div class="flex items-center gap-3">
-                <button onclick="toggleDarkMode()" class="p-2 hover:bg-black/[0.05] dark:hover:bg-white/[0.1] rounded-full transition-all">
-                    <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-600 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"></svg>
+            <div class="flex items-center gap-2">
+                <button onclick="toggleDarkMode()" class="w-9 h-9 flex items-center justify-center hover:bg-black/[0.05] dark:hover:bg-white/[0.1] rounded-full transition-all active:scale-90">
+                    <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" class="h-[18px] w-[18px] text-slate-700 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"></svg>
                 </button>
-                <button onclick="toggleLang()" id="lang-btn" class="text-[11px] font-bold px-3 py-1.5 bg-black/[0.05] dark:bg-white/[0.1] rounded-full hover:bg-black/[0.1] dark:hover:bg-white/[0.2] transition-all">EN</button>
-                <button onclick="loadData()" id="refresh-btn" class="p-2 bg-black dark:bg-white text-white dark:text-black rounded-full transition-all active:scale-90 shadow-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                
+                <button onclick="toggleLang()" id="lang-btn-wrapper" class="flex items-center gap-1.5 px-3 h-9 bg-black/[0.05] dark:bg-white/[0.1] rounded-full hover:bg-black/[0.1] dark:hover:bg-white/[0.15] transition-all active:scale-95 group">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500 group-hover:text-apple-accent transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                    </svg>
+                    <span id="lang-btn" class="text-[12px] font-bold tracking-tight">EN</span>
+                </button>
+
+                <button onclick="loadData()" id="refresh-btn" class="w-9 h-9 bg-black dark:bg-white text-white dark:text-black rounded-full transition-all active:scale-90 shadow-sm flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                    </svg>
                 </button>
             </div>
         </div>
@@ -149,10 +170,10 @@
                             <div class="absolute inset-0 bg-black/40 backdrop-blur-sm md:hidden transition-opacity opacity-0 group-[.visible]:opacity-100" onclick="toggleStopList()"></div>
                             
                             <!-- Modal Content (Slide-up Sheet) -->
-                            <div class="absolute bottom-0 inset-x-0 h-[85vh] bg-[#F2F2F7] dark:bg-[#1c1c1e] rounded-t-[20px] shadow-[0_-10px_40px_rgba(0,0,0,0.2)] transform translate-y-full transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-[.visible]:translate-y-0 flex flex-col md:relative md:inset-auto md:h-auto md:bg-transparent md:dark:bg-transparent md:rounded-none md:shadow-none md:transform-none md:translate-y-0">
+                            <div id="stop-list-sheet" class="absolute bottom-0 inset-x-0 h-[85vh] bg-[#F2F2F7] dark:bg-[#1c1c1e] rounded-t-[20px] shadow-[0_-10px_40px_rgba(0,0,0,0.2)] transform translate-y-full transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-[.visible]:translate-y-0 flex flex-col md:relative md:inset-auto md:h-auto md:bg-transparent md:dark:bg-transparent md:rounded-none md:shadow-none md:transform-none md:translate-y-0">
                                 
                                 <!-- Drag Handle (Mobile Only) -->
-                                <div class="w-full h-7 flex items-center justify-center md:hidden shrink-0 cursor-grab active:cursor-grabbing" onclick="toggleStopList()">
+                                <div id="stop-list-handle" class="w-full h-8 flex items-center justify-center md:hidden shrink-0 cursor-grab active:cursor-grabbing">
                                     <div class="w-9 h-1.5 bg-black/20 dark:bg-white/20 rounded-full"></div>
                                 </div>
 
@@ -193,7 +214,7 @@
 
     <!-- [Feature] Route Detail Modal (Apple Style) -->
     <!-- z-index: 90 確保在 Navbar(100) 下方，但在內容上方 -->
-    <div id="route-modal" class="fixed inset-0 z-[90] hidden items-center justify-center transition-all invisible opacity-0">
+    <div id="route-modal" class="fixed inset-0 z-[90] hidden items-center justify-center">
         <!-- Backdrop: 背景使用更淡的遮罩，強調模糊而非變暗 -->
         <div class="absolute inset-0 bg-white/10 dark:bg-black/20 transition-opacity" onclick="closeRouteModal()"></div>
         
@@ -206,7 +227,7 @@
             </div>
 
             <!-- Header Section -->
-            <div class="px-8 pt-6 pb-8 shrink-0">
+            <div class="px-8 pt-6 pb-5 shrink-0">
                 <div class="flex items-start justify-between">
                     <div class="flex gap-5 items-center">
                         <div id="modal-route-icon" class="w-16 h-16 bg-black dark:bg-white rounded-2xl flex items-center justify-center text-white dark:text-black font-black text-2xl shadow-xl"></div>
@@ -224,7 +245,7 @@
             </div>
 
             <!-- Scrollable Body -->
-            <div class="flex-1 overflow-y-auto custom-scrollbar px-8 pb-12 space-y-4">
+            <div class="flex-1 overflow-y-auto custom-scrollbar px-8 pb-10 space-y-3">
                 <div class="info-pill">
                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Service Hours</span>
                     <span id="modal-route-time" class="text-base font-semibold text-slate-900 dark:text-white"></span>
@@ -309,6 +330,10 @@
                 if (db.stops.length > 0) processAndRender();
             }, 5000);
             
+            // [Feature] Bottom Sheet Controller
+            initBottomSheet('stop-list-sheet', 'stop-list-handle', () => toggleStopList(false));
+            initBottomSheet('route-modal-card', 'route-modal-card', () => closeRouteModal());
+
             // [Fix Resize Lock] Handle window resize to unlock scroll
             window.addEventListener('resize', () => {
                 if (window.innerWidth >= 768 && isStopListOpen) {
@@ -329,7 +354,10 @@
 
         function toggleDarkMode() { isDark = !isDark; document.documentElement.classList.toggle('dark', isDark); updateThemeIcon(); saveSettings(); }
         function updateThemeIcon() {
-            document.getElementById('theme-icon').innerHTML = isDark ? '<path stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 9h-1m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />' : '<path stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />';
+            // SF Symbols Style Sun & Moon
+            document.getElementById('theme-icon').innerHTML = isDark
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />'
+                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />';
         }
 
         function toggleLang() { lang = (lang === 'zh') ? 'en' : 'zh'; document.getElementById('lang-btn').innerText = (lang === 'zh') ? 'EN' : '中文'; document.getElementById('stop-search').placeholder = i18n[lang].search; renderAll(); saveSettings(); }
@@ -462,9 +490,25 @@
                 return { ...s, distance: dist };
             });
 
-            if (userPos) {
-                filteredStops.sort((a, b) => (a.distance || 999) - (b.distance || 999));
-            }
+            // [Enhanced Sorting] 優先排有車的站，其次按距離排
+            filteredStops.sort((a, b) => {
+                const countA = busCounts[a.id] || 0;
+                const countB = busCounts[b.id] || 0;
+                
+                // 1. 是否有車 (Boolean 權重)
+                const hasBusA = countA > 0 ? 1 : 0;
+                const hasBusB = countB > 0 ? 1 : 0;
+                
+                if (hasBusA !== hasBusB) {
+                    return hasBusB - hasBusA; // 有車的 (1) 排在沒車的 (0) 前面
+                }
+                
+                // 2. 距離排序 (如果有車/沒車狀態相同)
+                const distA = a.distance !== null ? a.distance : 9999;
+                const distB = b.distance !== null ? b.distance : 9999;
+                
+                return distA - distB;
+            });
             
             if (filteredStops.length === 0 && query !== "") {
                 container.innerHTML = `<div class="py-8 text-center text-slate-400 text-xs">${lang === 'zh' ? '找不到相關車站' : 'No stops found'}</div>`;
@@ -484,8 +528,9 @@
                     ? `<span class="text-[9px] opacity-60 ml-2 font-normal">${stop.distance < 1 ? Math.round(stop.distance * 1000) + 'm' : stop.distance.toFixed(1) + 'km'}</span>`
                     : '';
 
+                const hasBuses = count > 0;
                 return `
-                <button onclick="setStop('${stop.id}', true)" class="w-full px-4 py-2.5 rounded-[12px] text-[13px] font-medium text-left transition-all flex items-center justify-between group ${isSelected ? 'bg-apple-accent text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:bg-black/[0.03] dark:hover:bg-white/[0.05]'}">
+                <button onclick="setStop('${stop.id}', true)" class="w-full px-4 py-2.5 rounded-[12px] text-[13px] font-medium text-left transition-all flex items-center justify-between group ${isSelected ? 'bg-apple-accent text-white shadow-md' : (hasBuses ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500')} hover:bg-black/[0.03] dark:hover:bg-white/[0.05]">
                     <div class="flex flex-col truncate pr-2">
                         <span class="truncate">${lang === 'zh' ? stop.name_zh : stop.name_en}</span>
                         ${distLabel}
@@ -498,8 +543,8 @@
             }).join('');
         }
 
-        window.toggleStopList = () => {
-            isStopListOpen = !isStopListOpen;
+        window.toggleStopList = (forceState) => {
+            isStopListOpen = (typeof forceState === 'boolean') ? forceState : !isStopListOpen;
             const container = document.getElementById('stop-list-container');
             const chevron = document.getElementById('stop-chevron');
             
@@ -520,22 +565,25 @@
 
         // [Fix] Added 'fromUserAction' param. If false (auto-gps), don't toggle menu
         window.setStop = (id, fromUserAction = true) => {
+            if (currentStopId === id && !isFirstLoad) {
+                // 如果車站沒變，只需確保關閉選單，不需重新渲染全頁
+                if (window.innerWidth < 768 && fromUserAction) toggleStopList(false);
+                return;
+            }
+            
             currentStopId = id;
-            // Only toggle (close) the menu if the user manually clicked a stop,
-            // OR if it's auto-gps but the menu happens to be open (unlikely on load, but safe)
-            if (window.innerWidth < 768 && fromUserAction) toggleStopList();
+            if (window.innerWidth < 768 && fromUserAction) toggleStopList(false);
             
             expandedTripId = null;
             renderAll();
             saveSettings();
         };
 
-        // [Feature] Added 'silent' parameter for auto-detection
+        // [Feature] Dual-stage Positioning: Fast then Accurate
         window.findNearestStop = (silent = false) => {
             if (db.stops.length === 0) return;
-            
             if (!navigator.geolocation) {
-                if (!silent) alert(lang === 'zh' ? "您的瀏覽器不支援定位" : "Geolocation not supported");
+                if (!silent) alert(lang === 'zh' ? "不支援定位" : "No GPS support");
                 return;
             }
 
@@ -543,17 +591,21 @@
             btn.classList.add('animate-spin');
             btn.disabled = true;
 
-            navigator.geolocation.getCurrentPosition((position) => {
+            let isFinal = false; // 標記是否已獲得高精度結果
+
+            const handleCoords = (position, isHighRes) => {
+                if (isFinal && !isHighRes) return; // 如果已有高精度，忽略隨後回傳的低精度
+                if (isHighRes) isFinal = true;
+
                 const { latitude, longitude } = position.coords;
-                userPos = { lat: latitude, lng: longitude }; // Store for sorting
+                userPos = { lat: latitude, lng: longitude };
+                
                 let minDistance = Infinity;
                 let nearestId = null;
 
                 db.stops.forEach(stop => {
-                    // 確保 stop.long 存在 (對應你提供的資料格式)
                     const stopLong = stop.long || stop.lng;
                     if (stop.lat && stopLong) {
-                        // [Fix C] Use Haversine Formula
                         const d = getDistanceFromLatLonInKm(latitude, longitude, stop.lat, stopLong);
                         if (d < minDistance) {
                             minDistance = d;
@@ -563,23 +615,42 @@
                 });
 
                 if (nearestId) {
-                    // [Fix] If silent (auto-load), pass false to setStop to prevent menu toggling
-                    setStop(nearestId, !silent);
-                    if (navigator.vibrate) navigator.vibrate(50);
+                    // 如果找到的是新車站，或者這是第一次定位結果，才執行切換
+                    if (nearestId !== currentStopId) {
+                        setStop(nearestId, !silent);
+                    } else if (window.innerWidth < 768 && !silent) {
+                        // 如果車站沒變，但選單開著，仍需手動關閉
+                        toggleStopList(false);
+                    }
+                    
+                    if (isHighRes && navigator.vibrate) navigator.vibrate(50);
                 }
-                
-                btn.classList.remove('animate-spin');
-                btn.disabled = false;
-            }, (err) => {
-                // Only show alert if triggered manually (not silent)
-                if (!silent) {
-                    let msg = lang === 'zh' ? "定位失敗：請確保已開啟 GPS 並允許權限" : "Location failed: Please enable GPS and permissions";
-                    if (location.protocol !== 'https:' && location.hostname !== 'localhost') msg += " (Insecure Context: HTTPS required)";
-                    alert(msg);
+
+                if (isHighRes || isFinal) {
+                    btn.classList.remove('animate-spin');
+                    btn.disabled = false;
                 }
-                btn.classList.remove('animate-spin');
-                btn.disabled = false;
-            }, { enableHighAccuracy: true, timeout: 10000 });
+            };
+
+            // 第一階段：快速定位 (低精度, 3秒超時)
+            navigator.geolocation.getCurrentPosition(
+                (pos) => handleCoords(pos, false),
+                null,
+                { enableHighAccuracy: false, timeout: 3000 }
+            );
+
+            // 第二階段：精確定位 (高精度, 15秒超時)
+            navigator.geolocation.getCurrentPosition(
+                (pos) => handleCoords(pos, true),
+                (err) => {
+                    if (!isFinal) { // 如果連低精度都沒拿到才報錯
+                        if (!silent) alert(lang === 'zh' ? "定位失敗" : "Location failed");
+                        btn.classList.remove('animate-spin');
+                        btn.disabled = false;
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 15000 }
+            );
         };
 
         window.changeMode = (m) => { currentMode = m; expandedTripId = null; renderAll(); saveSettings(); };
@@ -660,7 +731,7 @@
 
                 return `
                 <!-- [Fix] Outer card handles expand toggle globally -->
-                <div onclick="toggleTripDetails('${tripId}')" class="apple-card rounded-[24px] px-5 py-4 cursor-pointer active:scale-[0.98] ${isExpanded ? 'ring-2 ring-apple-accent/20 border-apple-accent/30' : ''}">
+                <div onclick="toggleTripDetails('${tripId}')" class="apple-card rounded-[24px] px-5 py-5 cursor-pointer active:scale-[0.98] ${isExpanded ? 'ring-2 ring-apple-accent/20 border-apple-accent/30' : ''}">
                     <div class="flex justify-between items-center">
                         <div class="flex items-center gap-4">
                             <!-- [Fix] Logo has stopPropagation to prevent triggering outer card -->
@@ -673,8 +744,8 @@
                             </div>
                             
                             <div class="flex flex-col">
-                                <span class="text-lg font-bold tracking-tighter text-slate-900 dark:text-white leading-none">${formatTime(bus.arrival_time)}</span>
-                                <span class="text-[11px] font-medium text-slate-400 mt-1.5 uppercase tracking-wide opacity-80">${bus.route_name}</span>
+                                <span class="text-[19px] font-extrabold tracking-tight text-slate-900 dark:text-white leading-none">${formatTime(bus.arrival_time)}</span>
+                                <!-- Route name removed for cleaner Apple-style UI -->
                             </div>
                         </div>
                         <div class="px-4 py-2 rounded-[16px] ${statusCls.replace('border-indigo-100', 'border-transparent')} text-center min-w-[70px]">
@@ -714,14 +785,16 @@
             const route = db.routes.find(r => r.id === routeId);
             if (!route) return;
 
-            // 觸覺回饋
             if (navigator.vibrate) navigator.vibrate(8);
 
             const modal = document.getElementById('route-modal');
-            const card = document.getElementById('route-modal-card');
             
-            // Populate Data (省略...保持原有的資料填充邏輯)
-            document.getElementById('modal-route-icon').innerText = routeId;
+            // 同步卡片邏輯：提取短路由名稱 (例如 "1A")
+            const routeMatch = routeId.match(/^[0-9A-Z]+/i);
+            const routeDisp = routeMatch ? routeMatch[0] : routeId.split(' ')[0];
+
+            // Populate Data
+            document.getElementById('modal-route-icon').innerText = routeDisp;
             document.getElementById('modal-route-name').innerText = lang === 'zh' ? route.name_zh : route.name_en;
             document.getElementById('modal-route-category').innerText = lang === 'zh' ? route.category_zh : route.category_en;
             document.getElementById('modal-route-time').innerText = route.open_close_time_UI || '--';
@@ -737,25 +810,86 @@
                 remarksContainer.classList.add('hidden');
             }
 
-            // Show Animation (Enhanced Side-Slide)
+            // Show Animation
             modal.classList.remove('hidden');
-            requestAnimationFrame(() => {
-                modal.classList.remove('invisible', 'opacity-0');
-                // CSS handle the transform via classes or just by being not invisible
-            });
-            document.body.classList.add('modal-open');
+            setTimeout(() => {
+                modal.classList.add('visible');
+                document.body.classList.add('modal-open');
+            }, 10);
         };
 
         window.closeRouteModal = () => {
             const modal = document.getElementById('route-modal');
-            // 只需觸發 Opacity，CSS Transform 會自動處理 Drawer 滑出
-            modal.classList.add('opacity-0');
+            // 1. 移除 visible class，這會觸發 CSS 中的 transform 向上/向右滑出動畫
+            modal.classList.remove('visible');
+            document.body.classList.remove('modal-open');
             
+            // 2. 等待動畫結束 (500ms) 再隱藏容器
             setTimeout(() => {
-                modal.classList.add('hidden', 'invisible');
-                document.body.classList.remove('modal-open');
-            }, 500); // 稍微加長，匹配 0.6s 的 Drawer 滑動動畫
+                // 再次檢查以免在延遲期間用戶又點開了
+                if (!modal.classList.contains('visible')) {
+                    modal.classList.add('hidden');
+                }
+            }, 500);
         };
+
+        function initBottomSheet(sheetId, handleId, closeFn) {
+            const sheet = document.getElementById(sheetId);
+            const handle = document.getElementById(handleId);
+            if (!sheet || !handle || window.innerWidth >= 768) return;
+
+            let startY = 0, currentY = 0, initialTranslateY = 0;
+            let isDragging = false;
+
+            const onTouchStart = (e) => {
+                // 只在手機版生效，且如果是在內容區域捲動則不觸發拖動
+                if (window.innerWidth >= 768) return;
+                
+                // 如果點擊的是 scrollable 的區域，且不在頂部，則不觸發拖動
+                const scrollable = e.target.closest('.overflow-y-auto');
+                if (scrollable && scrollable.scrollTop > 0) return;
+
+                startY = e.touches[0].clientY;
+                sheet.classList.add('dragging');
+                isDragging = true;
+            };
+
+            const onTouchMove = (e) => {
+                if (!isDragging) return;
+                const touchY = e.touches[0].clientY;
+                const deltaY = touchY - startY;
+
+                // 只允許向下拖動關閉
+                if (deltaY > 0) {
+                    sheet.style.transform = `translateY(${deltaY}px)`;
+                    // 根據拖動深度調整背景透明度 (Optional)
+                } else {
+                    // 向上拉時增加阻尼感
+                    sheet.style.transform = `translateY(${deltaY * 0.2}px)`;
+                }
+            };
+
+            const onTouchEnd = (e) => {
+                if (!isDragging) return;
+                sheet.classList.remove('dragging');
+                isDragging = false;
+
+                const touchY = e.changedTouches[0].clientY;
+                const deltaY = touchY - startY;
+
+                // 清除行內樣式讓 CSS Transition 接手
+                sheet.style.transform = '';
+
+                // 如果下滑超過 120px 或是速度夠快，則關閉
+                if (deltaY > 120) {
+                    closeFn();
+                }
+            };
+
+            handle.addEventListener('touchstart', onTouchStart, { passive: true });
+            window.addEventListener('touchmove', onTouchMove, { passive: false });
+            window.addEventListener('touchend', onTouchEnd);
+        }
 
         // Close on Escape key
         document.addEventListener('keydown', (e) => {

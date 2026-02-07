@@ -23,7 +23,7 @@
             }
         }
         
-        // [Fix FOUC] Load settings before render
+        // [Fix FOUC] Load settings before render test test test
         const SETTINGS_KEY = 'cuhk_bus_vibe_settings';
         let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {
             stopId: '', lang: 'zh', isDark: window.matchMedia('(prefers-color-scheme: dark)').matches, mode: (new Date().getDay() === 0) ? 'sunday' : 'weekday'

@@ -23,12 +23,16 @@
             }
         }
         
-        // [Fix FOUC] Load settings before render test test test
+        // [Fix FOUC] Load settings before render
         const SETTINGS_KEY = 'cuhk_bus_vibe_settings';
         let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {
             stopId: '', lang: 'zh', isDark: window.matchMedia('(prefers-color-scheme: dark)').matches, mode: (new Date().getDay() === 0) ? 'sunday' : 'weekday'
         };
-        let { stopId: currentStopId, lang, isDark, mode: currentMode } = settings;
+        // [Location Priority] 每次開啟皆清除 stopId，強制啟動自動定位邏輯
+        let { lang, isDark, mode: currentMode } = settings;
+        let currentStopId = '';
+        // 額外確保：即使 settings 裡有，也不使用它
+        settings.stopId = '';
         
         // Apply Dark Mode immediately
         if (isDark) document.documentElement.classList.add('dark');
@@ -84,9 +88,9 @@
                 position: fixed;
                 bottom: 0; left: 0; right: 0;
                 width: 100%;
-                /* 確保不會撞到 16 (64px) 的 Navbar，保留一些間距 */
-                height: calc(100dvh - 80px);
-                max-height: calc(100dvh - 80px);
+                /* [Modified] Auto height to fit content */
+                height: auto;
+                max-height: calc(100dvh - 100px); /* Limit height to avoid hitting navbar */
                 /* 更圓潤的 Apple Style 圓角 */
                 border-radius: 24px 24px 0 0;
                 transform: translateY(110%);
@@ -359,6 +363,8 @@
             updateClock();
             setInterval(updateClock, 1000);
             setInterval(updateRefreshUI, 1000); // Stage 3 Ticker
+            
+            // 統一由 loadData 內部控制定位時機
             loadData();
             
             // Client-side ticker to update relative times (e.g. "2 min" -> "1 min") without fetching
@@ -400,18 +406,38 @@
         function toggleLang() { lang = (lang === 'zh') ? 'en' : 'zh'; document.getElementById('lang-btn').innerText = (lang === 'zh') ? 'EN' : '中文'; document.getElementById('stop-search').placeholder = i18n[lang].search; renderAll(); saveSettings(); }
 
         function updateRefreshUI() {
-            refreshTimer++;
-            const percent = (refreshTimer / REFRESH_INTERVAL) * 100;
-            document.getElementById('refresh-bar').style.width = `${percent}%`;
-            if (refreshTimer >= REFRESH_INTERVAL) {
+            // [Apple Style] 只有在未滿時才推進，滿了就由 loadData 重置
+            if (refreshTimer < REFRESH_INTERVAL) {
+                refreshTimer++;
+                const bar = document.getElementById('refresh-bar');
+                if (bar) {
+                    // 確保動畫開啟 (防止被 Reset 關閉後未恢復)
+                    if (bar.style.transition === 'none') {
+                        bar.style.transition = 'width 1s linear';
+                    }
+                    const pct = Math.min((refreshTimer / REFRESH_INTERVAL) * 100, 100);
+                    bar.style.width = `${pct}%`;
+                }
+            } else {
+                // 時間到，執行更新 (loadData 內會負責重置 timer)
                 loadData(true);
             }
         }
 
         async function loadData(isAutoRefresh = false) {
-            refreshTimer = 0; // Reset timer on any load
-            document.getElementById('refresh-bar').style.width = `0%`;
-            
+            // [Feature] Reset Timer & Bar Instantly (Apple Style Smooth Reset)
+            refreshTimer = 0;
+            const bar = document.getElementById('refresh-bar');
+            if (bar) {
+                // 1. 暫時關閉動畫，瞬間歸零
+                bar.style.transition = 'none';
+                bar.style.width = '0%';
+                // 2. 強制瀏覽器重繪 (Force Reflow)
+                void bar.offsetWidth;
+                // 3. 恢復動畫 (下一秒 updateRefreshUI 會接手)
+                bar.style.transition = 'width 1s linear';
+            }
+
             if (fetchController) fetchController.abort();
             fetchController = new AbortController();
             const signal = fetchController.signal;
@@ -440,20 +466,19 @@
                 db.route_times = busData.route_times;
                 if (routeData) db.routes = routeData;
 
-                // 動畫現在由 setTimeout 統一管理，不在此手動移除
+                // [Location Flow] 如果是第一次加載，且還沒有選定車站，強制觸發定位
+                // 必須在 db.stops 賦值後執行，findNearestStop 才有數據可算
+                if (isFirstLoad) {
+                    findNearestStop(true);
+                }
+
                 if (!isFirstLoad && !isAutoRefresh && navigator.vibrate) navigator.vibrate(10);
-                
-                if (!db.stops.some(s => s.id === currentStopId) && db.stops.length > 0) currentStopId = db.stops[0].id;
                 
                 if (isFirstLoad) {
                     isFirstLoad = false;
-                    const hasUserPreference = localStorage.getItem(SETTINGS_KEY) && JSON.parse(localStorage.getItem(SETTINGS_KEY)).stopId;
-                    if (!hasUserPreference && navigator.permissions) {
-                        navigator.permissions.query({ name: 'geolocation' }).then(result => {
-                            if (result.state === 'granted') findNearestStop(true);
-                        });
-                    }
-                    renderAll(true); // First load needs full render
+                    // 初始渲染，如果定位還沒回來，會先顯示第一個站
+                    if (!currentStopId && db.stops.length > 0) currentStopId = db.stops[0].id;
+                    renderAll(true);
                 } else {
                     renderAll(false); // Subsequent loads don't rebuild stop grid (prevents scroll jump)
                 }
@@ -527,8 +552,10 @@
             // Stage 2: Distance Calculation & Sorting
             filteredStops = filteredStops.map(s => {
                 let dist = null;
-                if (userPos && s.lat && (s.long || s.lng)) {
-                    dist = getDistanceFromLatLonInKm(userPos.lat, userPos.lng, s.lat, s.long || s.lng);
+                // 修正：確保 lat/long 欄位匹配，且 userPos 只要存在就計算
+                const sLong = s.long || s.lng;
+                if (userPos && s.lat && sLong) {
+                    dist = getDistanceFromLatLonInKm(userPos.lat, userPos.lng, s.lat, sLong);
                 }
                 return { ...s, distance: dist };
             });
@@ -610,7 +637,8 @@
         // [Fix] Added 'fromUserAction' param. If false (auto-gps), don't toggle menu
         window.setStop = (id, fromUserAction = true) => {
             if (currentStopId === id && !isFirstLoad) {
-                // 如果車站沒變，只需確保關閉選單，不需重新渲染全頁
+                // 車站沒變也要重新渲染 Grid，因為可能 userPos 剛更新需要顯示距離
+                renderStopGrid();
                 if (window.innerWidth < 768 && fromUserAction) toggleStopList(false);
                 return;
             }
@@ -659,11 +687,16 @@
                 });
 
                 if (nearestId) {
-                    // 如果找到的是新車站，或者這是第一次定位結果，才執行切換
-                    if (nearestId !== currentStopId) {
-                        setStop(nearestId, !silent);
-                    } else if (window.innerWidth < 768 && !silent) {
-                        // 如果車站沒變，但選單開著，仍需手動關閉
+                    const isNewStop = currentStopId !== nearestId;
+                    currentStopId = nearestId;
+                    
+                    // [Apple Style] 座標更新後，立即重新渲染全域，這會確保：
+                    // 1. 主畫面的抵達時間是正確車站
+                    // 2. 側邊欄/彈窗中的車站列表帶有精準距離
+                    renderAll(true);
+                    
+                    // 如果是自動定位 (silent)，不需要關閉選單，因為選單根本沒開
+                    if (window.innerWidth < 768 && !silent) {
                         toggleStopList(false);
                     }
                     

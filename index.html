@@ -26,10 +26,17 @@
         // [Fix FOUC] Load settings before render
         const SETTINGS_KEY = 'cuhk_bus_vibe_settings';
         let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {
-            stopId: '', lang: 'zh', isDark: window.matchMedia('(prefers-color-scheme: dark)').matches, mode: (new Date().getDay() === 0) ? 'sunday' : 'weekday'
+            stopId: '',
+            lang: 'zh',
+            isDark: window.matchMedia('(prefers-color-scheme: dark)').matches,
+            mode: (new Date().getDay() === 0) ? 'sunday' : 'weekday',
+            autoSwitchStop: true,  // NEW: Auto switch stop after GPS
+            testTime: null,        // NEW: Test time (HH:MM format)
+            testDay: null,         // NEW: Test day (0-6)
+            isDevMode: false       // NEW
         };
         // [Location Priority] 優先使用記憶的 stopId，稍後由 loadData 內的 GPS 邏輯決定是否覆蓋
-        let { lang, isDark, mode: currentMode } = settings;
+        let { lang, isDark, mode: currentMode, autoSwitchStop, testTime, testDay, isDevMode } = settings;
         let currentStopId = settings.stopId || '';
         
         // Apply Dark Mode immediately
@@ -55,8 +62,9 @@
         /* [Fix E] iOS Safe Area Support - Increased padding for bottom sheet */
         .pb-safe-area { padding-bottom: calc(2.5rem + env(safe-area-inset-bottom)); }
         
-        /* [Apple Hierarchy] Navbar 必須最高 */
+        /* [Apple Hierarchy] Settings(110) > Navbar(100) > Route Modal(90) */
         nav.sticky { z-index: 100; }
+        #settings-modal { z-index: 110; }
 
         /* [Route Modal] 修正：基礎狀態需包含過渡屬性 */
         #route-modal {
@@ -88,7 +96,7 @@
                 width: 100%;
                 /* [Modified] Auto height to fit content */
                 height: auto;
-                max-height: calc(100dvh - 100px); /* Limit height to avoid hitting navbar */
+                max-height: calc(100dvh - 80px); /* 64px navbar + 16px safe gap */
                 /* 更圓潤的 Apple Style 圓角 */
                 border-radius: 24px 24px 0 0;
                 transform: translateY(110%);
@@ -164,8 +172,7 @@
 
     <!-- Navbar: Apple Style Glass Floating Bar -->
     <nav class="sticky top-0 z-[100] glass border-b border-black/[0.05] dark:border-white/[0.05] h-16">
-        <!-- Stage 3: Refresh Progress Bar -->
-        <div class="absolute bottom-0 left-0 h-[2px] bg-apple-accent transition-all duration-[1000ms] ease-linear" id="refresh-bar" style="width: 0%"></div>
+        <!-- Progress Bar Removed in favor of Ring Button -->
         <div class="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <div class="w-9 h-9 bg-black dark:bg-white rounded-[10px] flex items-center justify-center text-white dark:text-black font-[900] text-lg tracking-tighter shadow-apple">CU</div>
@@ -175,22 +182,30 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <button onclick="toggleDarkMode()" class="w-9 h-9 flex items-center justify-center hover:bg-black/[0.05] dark:hover:bg-white/[0.1] rounded-full transition-all active:scale-90">
-                    <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" class="h-[18px] w-[18px] text-slate-700 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"></svg>
-                </button>
-                
-                <button onclick="toggleLang()" id="lang-btn-wrapper" class="flex items-center gap-1.5 px-3 h-9 bg-black/[0.05] dark:bg-white/[0.1] rounded-full hover:bg-black/[0.1] dark:hover:bg-white/[0.15] transition-all active:scale-95 group">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500 group-hover:text-apple-accent transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+              <!-- Settings Button (Apple Style) -->
+              <button onclick="toggleSettings()" class="w-9 h-9 flex items-center justify-center hover:bg-black/[0.05] dark:hover:bg-white/[0.1] rounded-full transition-all active:scale-90">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-[18px] w-[18px] text-slate-700 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+    
+              <!-- iOS Style Ring Progress Button -->
+              <div class="relative w-9 h-9 flex items-center justify-center">
+                  <!-- Ring Background & Progress -->
+                  <svg class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none transform scale-110" viewBox="0 0 36 36">
+                      <!-- Track -->
+                      <path class="text-black/5 dark:text-white/5" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" />
+                      <!-- Progress Indicator (C=100) -->
+                      <path id="refresh-ring" class="text-apple-accent transition-all duration-1000 ease-linear" stroke-dasharray="100, 100" stroke-dashoffset="100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+                  </svg>
+                  
+                  <button onclick="loadData()" id="refresh-btn" class="w-full h-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-700 dark:text-slate-300 rounded-full transition-all active:scale-90 flex items-center justify-center z-10">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    <span id="lang-btn" class="text-[12px] font-bold tracking-tight">EN</span>
-                </button>
-
-                <button onclick="loadData()" id="refresh-btn" class="w-9 h-9 bg-black dark:bg-white text-white dark:text-black rounded-full transition-all active:scale-90 shadow-sm flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-                    </svg>
-                </button>
+                  </button>
+              </div>
             </div>
         </div>
     </nav>
@@ -221,7 +236,7 @@
                             <div class="absolute inset-0 bg-black/40 backdrop-blur-sm md:hidden transition-opacity opacity-0 group-[.visible]:opacity-100" onclick="toggleStopList()"></div>
                             
                             <!-- Modal Content (Slide-up Sheet) -->
-                            <div id="stop-list-sheet" class="absolute bottom-0 inset-x-0 h-[85vh] bg-[#F2F2F7] dark:bg-[#1c1c1e] rounded-t-[20px] shadow-[0_-10px_40px_rgba(0,0,0,0.2)] transform translate-y-full transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-[.visible]:translate-y-0 flex flex-col md:relative md:inset-auto md:h-auto md:bg-transparent md:dark:bg-transparent md:rounded-none md:shadow-none md:transform-none md:translate-y-0">
+                            <div id="stop-list-sheet" class="absolute bottom-0 inset-x-0 max-h-[calc(100dvh-80px)] h-[85vh] bg-[#F2F2F7] dark:bg-[#1c1c1e] rounded-t-[20px] shadow-[0_-10px_40px_rgba(0,0,0,0.2)] transform translate-y-full transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-[.visible]:translate-y-0 flex flex-col md:relative md:inset-auto md:h-auto md:bg-transparent md:dark:bg-transparent md:rounded-none md:shadow-none md:transform-none md:translate-y-0">
                                 
                                 <!-- Drag Handle (Mobile Only) -->
                                 <div id="stop-list-handle" class="w-full h-8 flex items-center justify-center md:hidden shrink-0 cursor-grab active:cursor-grabbing">
@@ -262,6 +277,162 @@
             </section>
         </div>
     </main>
+
+    <!-- Settings Modal (Apple Style) -->
+    <div id="settings-modal" class="fixed inset-0 z-110 hidden items-center justify-center">
+      <!-- Backdrop -->
+      <div class="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm transition-opacity" onclick="toggleSettings()"></div>
+      
+      <!-- Modal Card -->
+      <div id="settings-card" class="relative bg-[#F2F2F7] dark:bg-[#1C1C1E] rounded-[28px] shadow-2xl w-[90vw] max-w-[420px] overflow-hidden border border-black/5 dark:border-white/10 transform scale-95 opacity-0 transition-all duration-300">
+        
+        <!-- Header -->
+        <div class="px-6 pt-6 pb-4 border-b border-black/5 dark:border-white/5">
+          <div class="flex items-center justify-between">
+            <h2 class="text-[22px] font-extrabold tracking-tight text-slate-900 dark:text-white" data-i18n="settings">設定</h2>
+            <button onclick="toggleSettings()" class="w-9 h-9 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 rounded-full flex items-center justify-center transition-all active:scale-90">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div class="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
+          
+          <!-- Appearance Section -->
+          <div class="space-y-3">
+            <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest" data-i18n="appearance">外觀</h3>
+            
+            <!-- Theme Toggle -->
+            <div class="flex items-center justify-between py-3 px-4 bg-white dark:bg-[#2C2C2E] rounded-[16px]">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[10px] flex items-center justify-center">
+                  <svg id="settings-theme-icon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"></svg>
+                </div>
+                <span class="text-[15px] font-semibold text-slate-900 dark:text-white" data-i18n="theme">深色模式</span>
+              </div>
+              <button onclick="toggleDarkMode(); updateSettingsUI()" class="relative w-[51px] h-[31px] rounded-full transition-colors duration-300" id="theme-toggle-btn">
+                <div class="absolute top-[2px] left-[2px] w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300" id="theme-toggle-knob"></div>
+              </button>
+            </div>
+
+            <!-- Language Toggle -->
+            <div class="flex items-center justify-between py-3 px-4 bg-white dark:bg-[#2C2C2E] rounded-[16px]">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-[10px] flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                  </svg>
+                </div>
+                <span id="lang-label" class="text-[15px] font-semibold text-slate-900 dark:text-white">繁體中文</span>
+              </div>
+              <button onclick="toggleLang(); updateSettingsUI()" class="relative w-[51px] h-[31px] rounded-full transition-colors duration-300" id="lang-toggle-btn">
+                <div class="absolute top-[2px] left-[2px] w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300" id="lang-toggle-knob"></div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Behavior Section -->
+          <div class="space-y-3">
+            <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest" data-i18n="behavior">行為</h3>
+            
+            <!-- Auto Switch Stop Toggle -->
+            <div class="flex items-center justify-between py-3 px-4 bg-white dark:bg-[#2C2C2E] rounded-[16px]">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-[10px] flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <div class="flex flex-col">
+                  <span class="text-[15px] font-semibold text-slate-900 dark:text-white" data-i18n="autoSwitch">自動切換車站</span>
+                  <span class="text-[11px] text-slate-500 dark:text-slate-400" data-i18n="autoSwitchDesc">定位後自動跳轉</span>
+                </div>
+              </div>
+              <button onclick="toggleAutoSwitch()" class="relative w-[51px] h-[31px] rounded-full transition-colors duration-300" id="auto-switch-btn">
+                <div class="absolute top-[2px] left-[2px] w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300" id="auto-switch-knob"></div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Advanced Section -->
+          <div class="space-y-3">
+            <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest" data-i18n="advanced">進階</h3>
+
+            <!-- Dev Mode Toggle -->
+            <div class="flex items-center justify-between py-3 px-4 bg-white dark:bg-[#2C2C2E] rounded-[16px]">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-gradient-to-br from-gray-500 to-slate-600 rounded-[10px] flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                  </svg>
+                </div>
+                <div class="flex flex-col">
+                  <span class="text-[15px] font-semibold text-slate-900 dark:text-white" data-i18n="devMode">開發模式</span>
+                  <span class="text-[11px] text-slate-500 dark:text-slate-400" data-i18n="devModeDesc">啟用時間模擬與測試工具</span>
+                </div>
+              </div>
+              <button onclick="toggleDevMode()" class="relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-slate-300" id="dev-mode-btn">
+                <div class="absolute top-[2px] left-[2px] w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300" id="dev-mode-knob"></div>
+              </button>
+            </div>
+            
+            <!-- Test Time Controller (Hidden by default) -->
+            <div id="test-time-panel" class="hidden overflow-hidden transition-all duration-300">
+              <div class="bg-white dark:bg-[#2C2C2E] rounded-[16px] overflow-hidden">
+                <!-- Header Status -->
+                <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-700/50 flex justify-between items-center bg-slate-50/50 dark:bg-white/5">
+                   <div class="flex items-center gap-2">
+                     <div class="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></div>
+                     <span class="text-[12px] font-bold text-slate-500 uppercase tracking-wider" data-i18n="simulation">模擬中</span>
+                   </div>
+                   <button onclick="clearTestTime()" class="text-[12px] font-medium text-red-500 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" data-i18n="resetRealTime">重置為實時</button>
+                </div>
+
+                <!-- Apple Style Picker Interface -->
+                <div class="p-4 space-y-4">
+                  <!-- Day Selector (Auto-fit Grid) -->
+                  <div class="p-1 bg-slate-100 dark:bg-black/20 rounded-[10px]">
+                    <div class="grid grid-cols-7 gap-1" id="day-picker-container">
+                       <!-- JS will inject buttons here -->
+                    </div>
+                  </div>
+
+                  <!-- Time Scroller Simulation -->
+                  <div class="flex items-center justify-center gap-4 py-2">
+                    <div class="relative w-full h-[44px] bg-slate-100 dark:bg-black/20 rounded-[10px] flex items-center px-4 group cursor-pointer" onclick="document.getElementById('test-time-native').showPicker()">
+                      <span class="text-slate-400 mr-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      </span>
+                      <span id="time-display" class="text-[19px] font-mono font-semibold text-slate-900 dark:text-white tracking-wide">--:--</span>
+                      
+                      <!-- Hidden Native Input for best mobile experience -->
+                      <input type="time" id="test-time-native" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" onchange="handleTimeChange(this.value)">
+                      
+                      <div class="absolute right-3 text-slate-400 group-hover:text-apple-accent transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Info text -->
+                  <p class="text-[10px] text-center text-slate-400 dark:text-slate-500" data-i18n="timeHint">點擊時間或日期即可模擬該時段班次</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 border-t border-black/5 dark:border-white/5">
+          <p class="text-[11px] text-center text-slate-400 font-medium">BusVibe Pro v2.0</p>
+        </div>
+      </div>
+    </div>
 
     <!-- [Feature] Route Detail Modal (Apple Style) -->
     <!-- z-index: 90 確保在 Navbar(100) 下方，但在內容上方 -->
@@ -509,14 +680,228 @@
         }
 
         const i18n = {
-            zh: { weekday: '教學日', nonteaching: '非教學日', sunday: '假日/週日', arrival: '實時到站', empty: '當前時段無班次', arrived: '已抵達', soon: '即將', unit: '分', search: '搜尋車站...', next: '後續車站 (預計)', term: '終點站' },
-            en: { weekday: 'Teaching', nonteaching: 'Non-Teaching', sunday: 'Sun/Holiday', arrival: 'Real-time Arrivals', empty: 'No service at this time', arrived: 'Arrived', soon: 'Soon', unit: 'min', search: 'Search stops...', next: 'Trip Timeline', term: 'Terminus' }
+            zh: {
+                weekday: '教學日', nonteaching: '非教學日', sunday: '假日/週日', arrival: '實時到站', empty: '當前時段無班次', arrived: '已抵達', soon: '即將', unit: '分', search: '搜尋車站...', next: '後續車站 (預計)', term: '終點站',
+                settings: '設定', appearance: '外觀', theme: '深色模式', lang: '語言', behavior: '行為', autoSwitch: '自動切換車站', autoSwitchDesc: '定位後自動跳轉', advanced: '進階', devMode: '開發模式', devModeDesc: '啟用時間模擬與測試工具', simulation: '模擬中', resetRealTime: '重置為實時', timeHint: '點擊時間或日期即可模擬該時段班次'
+            },
+            en: {
+                weekday: 'Teaching', nonteaching: 'Non-Teaching', sunday: 'Sun/Holiday', arrival: 'Real-time Arrivals', empty: 'No service at this time', arrived: 'Arrived', soon: 'Soon', unit: 'min', search: 'Search stops...', next: 'Trip Timeline', term: 'Terminus',
+                settings: 'Settings', appearance: 'Appearance', theme: 'Dark Mode', lang: 'Language', behavior: 'Behavior', autoSwitch: 'Auto Switch Stop', autoSwitchDesc: 'Jump to stop after locating', advanced: 'Advanced', devMode: 'Dev Mode', devModeDesc: 'Enable time simulation tools', simulation: 'Simulating', resetRealTime: 'Reset to Live', timeHint: 'Tap time or day to simulate schedule'
+            }
+        };
+
+        // ========== Settings Modal Control ==========
+        window.toggleSettings = () => {
+            const modal = document.getElementById('settings-modal');
+            const card = document.getElementById('settings-card');
+            const isHidden = modal.classList.contains('hidden');
+            
+            if (isHidden) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                updateSettingsUI(); // Sync UI with current state
+                requestAnimationFrame(() => {
+                    card.classList.remove('scale-95', 'opacity-0');
+                    card.classList.add('scale-100', 'opacity-100');
+                });
+                document.body.classList.add('modal-open');
+            } else {
+                card.classList.remove('scale-100', 'opacity-100');
+                card.classList.add('scale-95', 'opacity-0');
+                document.body.classList.remove('modal-open');
+                setTimeout(() => {
+                    modal.classList.remove('flex');
+                    modal.classList.add('hidden');
+                }, 300);
+            }
+        };
+
+        window.updateSettingsUI = () => {
+            // 1. Update Texts for Current Language
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[lang][key]) el.textContent = i18n[lang][key];
+            });
+
+            // 2. Theme Toggle
+            const themeBtn = document.getElementById('theme-toggle-btn');
+            const themeKnob = document.getElementById('theme-toggle-knob');
+            if (themeBtn && themeKnob) {
+                if (isDark) {
+                    themeBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-apple-accent';
+                    themeKnob.style.transform = 'translateX(20px)';
+                } else {
+                    themeBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-slate-300';
+                    themeKnob.style.transform = 'translateX(0)';
+                }
+            }
+
+            // 3. Language Toggle
+            const langBtn = document.getElementById('lang-toggle-btn');
+            const langKnob = document.getElementById('lang-toggle-knob');
+            const langLabel = document.getElementById('lang-label');
+            if (langBtn && langKnob) {
+                if (lang === 'en') {
+                    langBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-apple-accent';
+                    langKnob.style.transform = 'translateX(20px)';
+                    if (langLabel) langLabel.textContent = 'English';
+                } else {
+                    langBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-slate-300';
+                    langKnob.style.transform = 'translateX(0)';
+                    if (langLabel) langLabel.textContent = '繁體中文';
+                }
+            }
+
+            // 4. Auto Switch Toggle
+            const autoBtn = document.getElementById('auto-switch-btn');
+            const autoKnob = document.getElementById('auto-switch-knob');
+            if (autoBtn && autoKnob) {
+                if (autoSwitchStop) {
+                    autoBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-apple-accent';
+                    autoKnob.style.transform = 'translateX(20px)';
+                } else {
+                    autoBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-slate-300';
+                    autoKnob.style.transform = 'translateX(0)';
+                }
+            }
+
+            // 5. Dev Mode Toggle
+            const devBtn = document.getElementById('dev-mode-btn');
+            const devKnob = document.getElementById('dev-mode-knob');
+            const devPanel = document.getElementById('test-time-panel');
+            
+            if (devBtn && devKnob) {
+                if (isDevMode) {
+                    devBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-apple-accent';
+                    devKnob.style.transform = 'translateX(20px)';
+                    devPanel.classList.remove('hidden');
+                } else {
+                    devBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-slate-300';
+                    devKnob.style.transform = 'translateX(0)';
+                    devPanel.classList.add('hidden');
+                }
+            }
+
+            // 6. Test Time UI State
+            if (isDevMode) {
+                const days = ['日', '一', '二', '三', '四', '五', '六'];
+                const daysEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const currentDayIdx = testDay !== null ? testDay : new Date().getDay();
+                
+                // Render Day Picker
+                const dayContainer = document.getElementById('day-picker-container');
+                if (dayContainer) {
+                    // Use grid-cols-7 to auto fit
+                    dayContainer.innerHTML = [0,1,2,3,4,5,6].map(d => {
+                        const isSelected = d === currentDayIdx;
+                        // Removed min-w-[44px], added w-full to ensure fit
+                        return `<button onclick="setTestDay(${d})" class="w-full h-[32px] rounded-[7px] text-[12px] font-semibold transition-all flex items-center justify-center ${isSelected ? 'bg-white dark:bg-slate-600 text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}">${lang === 'zh' ? days[d] : daysEn[d]}</button>`;
+                    }).join('');
+                }
+
+                // Update Time Display
+                const timeDisplay = document.getElementById('time-display');
+                if (timeDisplay) {
+                    timeDisplay.textContent = testTime || '--:--';
+                    if (testTime) timeDisplay.classList.add('text-apple-accent');
+                    else timeDisplay.classList.remove('text-apple-accent');
+                }
+            }
+        };
+
+        window.toggleAutoSwitch = () => {
+            autoSwitchStop = !autoSwitchStop;
+            saveSettings();
+            updateSettingsUI();
+        };
+
+        window.toggleDevMode = () => {
+            isDevMode = !isDevMode;
+            // If turning off, clear any active test settings
+            if (!isDevMode && (testTime || testDay !== null)) {
+                clearTestTime();
+            }
+            saveSettings();
+            updateSettingsUI();
+        };
+
+        window.handleTimeChange = (val) => {
+            if (!val) return;
+            testTime = val;
+            // Default to today if no day selected
+            if (testDay === null) testDay = new Date().getDay();
+            
+            applyTestSettings();
+        };
+
+        window.setTestDay = (dayIndex) => {
+            testDay = dayIndex;
+            // Default to now if no time selected
+            if (!testTime) {
+                const now = new Date();
+                testTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            }
+            applyTestSettings();
+        };
+
+        function applyTestSettings() {
+            // Update URL param
+            const url = new URL(window.location);
+            if (testTime) url.searchParams.set('time', testTime);
+            window.history.replaceState({}, '', url);
+            
+            saveSettings();
+            updateSettingsUI(); // Refresh UI to show active state
+            loadData(); // Trigger data reload
+            
+            if (navigator.vibrate) navigator.vibrate(10);
+        }
+
+        window.applyTestTime = () => {
+            const timeInput = document.getElementById('test-time-input');
+            const dayInput = document.getElementById('test-day-input');
+            
+            if (!timeInput.value) {
+                alert('請選擇測試時間');
+                return;
+            }
+            
+            testTime = timeInput.value;
+            testDay = parseInt(dayInput.value);
+            
+            // Update URL param for backward compatibility
+            const url = new URL(window.location);
+            url.searchParams.set('time', testTime);
+            window.history.replaceState({}, '', url);
+            
+            saveSettings();
+            updateSettingsUI();
+            loadData(); // Refresh with new test time
+            
+            if (navigator.vibrate) navigator.vibrate(50);
+        };
+
+        window.clearTestTime = () => {
+            testTime = null;
+            testDay = null;
+            
+            // Clear URL param
+            const url = new URL(window.location);
+            url.searchParams.delete('time');
+            window.history.replaceState({}, '', url);
+            
+            saveSettings();
+            updateSettingsUI();
+            loadData();
+            
+            if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
         };
 
         window.onload = () => {
-            // [Fix FOUC] Removed redundant class toggle, handled in head
+            // Initialize theme icon (settings modal only)
             updateThemeIcon();
-            document.getElementById('lang-btn').innerText = (lang === 'zh') ? 'EN' : '中文';
+            
+            // Initialize clock
             updateClock();
             setInterval(updateClock, 1000);
             setInterval(updateRefreshUI, 1000); // Stage 3 Ticker
@@ -546,53 +931,96 @@
         };
 
         function getNow() {
-            if (!mockTime) return new Date();
-            const [h, m] = mockTime.split(':');
-            const d = new Date(); d.setHours(parseInt(h), parseInt(m), 0); return d;
+            // Priority: testTime > urlParams.time > real time
+            const timeSource = testTime || mockTime;
+            
+            if (!timeSource) return new Date();
+            
+            const [h, m] = timeSource.split(':');
+            const d = new Date();
+            
+            // If testDay is set, adjust the date to match that day
+            if (testDay !== null) {
+                const currentDay = d.getDay();
+                const dayDiff = testDay - currentDay;
+                d.setDate(d.getDate() + dayDiff);
+            }
+            
+            d.setHours(parseInt(h), parseInt(m), 0, 0);
+            return d;
         }
 
         function saveSettings() {
-            localStorage.setItem(SETTINGS_KEY, JSON.stringify({ stopId: currentStopId, lang, isDark, mode: currentMode }));
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+                stopId: currentStopId,
+                lang,
+                isDark,
+                mode: currentMode,
+                autoSwitchStop,
+                testTime,
+                testDay,
+                isDevMode
+            }));
         }
 
-        function toggleDarkMode() { isDark = !isDark; document.documentElement.classList.toggle('dark', isDark); updateThemeIcon(); saveSettings(); }
+        function toggleDarkMode() {
+            isDark = !isDark;
+            document.documentElement.classList.toggle('dark', isDark);
+            updateThemeIcon();
+            saveSettings();
+        }
         function updateThemeIcon() {
-            // SF Symbols Style Sun & Moon
-            document.getElementById('theme-icon').innerHTML = isDark
-                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />'
-                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />';
+            // Update settings modal icon if open
+            const settingsIcon = document.getElementById('settings-theme-icon');
+            if (settingsIcon) {
+                settingsIcon.innerHTML = isDark
+                    ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />'
+                    : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />';
+            }
         }
 
-        function toggleLang() { lang = (lang === 'zh') ? 'en' : 'zh'; document.getElementById('lang-btn').innerText = (lang === 'zh') ? 'EN' : '中文'; document.getElementById('stop-search').placeholder = i18n[lang].search; renderAll(); saveSettings(); }
+        function toggleLang() {
+            lang = (lang === 'zh') ? 'en' : 'zh';
+            
+            // Update search placeholder
+            const searchInput = document.getElementById('stop-search');
+            if (searchInput) {
+                searchInput.placeholder = i18n[lang].search;
+            }
+            
+            renderAll();
+            saveSettings();
+        }
 
         function updateRefreshUI() {
-            // [Apple Style] 只有在未滿時才推進，滿了就由 loadData 重置
+            // [Apple Style Ring] Update SVG dashoffset
             if (refreshTimer < REFRESH_INTERVAL) {
                 refreshTimer++;
-                const bar = document.getElementById('refresh-bar');
-                if (bar) {
-                    // 確保動畫開啟 (防止被 Reset 關閉後未恢復)
-                    if (bar.style.transition === 'none') {
-                        bar.style.transition = 'width 1s linear';
+                const ring = document.getElementById('refresh-ring');
+                if (ring) {
+                    // Ensure transition is active
+                    if (ring.style.transition === 'none') {
+                        ring.style.transition = 'stroke-dashoffset 1s linear';
                     }
+                    // Calculate offset: 100 (empty) -> 0 (full)
                     const pct = Math.min((refreshTimer / REFRESH_INTERVAL) * 100, 100);
-                    bar.style.width = `${pct}%`;
+                    const offset = 100 - pct;
+                    ring.style.strokeDashoffset = offset;
                 }
             } else {
-                // 時間到，執行更新 (loadData 內會負責重置 timer)
                 loadData(true);
             }
         }
 
         async function loadData(isAutoRefresh = false) {
-            // [Feature] Reset Timer & Bar Instantly
+            // [Feature] Reset Timer & Ring Instantly
             refreshTimer = 0;
-            const bar = document.getElementById('refresh-bar');
-            if (bar) {
-                bar.style.transition = 'none';
-                bar.style.width = '0%';
-                void bar.offsetWidth;
-                bar.style.transition = 'width 1s linear';
+            const ring = document.getElementById('refresh-ring');
+            if (ring) {
+                ring.style.transition = 'none';
+                ring.style.strokeDashoffset = '100'; // Reset to empty
+                void ring.offsetWidth; // Force reflow
+                ring.style.transition = 'stroke-dashoffset 1s linear';
             }
 
             if (fetchController) fetchController.abort();
@@ -909,19 +1337,24 @@
 
                 if (nearestId) {
                     const isNewStop = currentStopId !== nearestId;
-                    currentStopId = nearestId;
                     
-                    // [Apple Style] 座標更新後，立即重新渲染全域，這會確保：
-                    // 1. 主畫面的抵達時間是正確車站
-                    // 2. 側邊欄/彈窗中的車站列表帶有精準距離
-                    renderAll(true);
-                    
-                    // 如果是自動定位 (silent)，不需要關閉選單，因為選單根本沒開
-                    if (window.innerWidth < 768 && !silent) {
-                        toggleStopList(false);
+                    // NEW: Respect autoSwitchStop setting
+                    if (autoSwitchStop) {
+                        currentStopId = nearestId;
                     }
-                    
-                    if (isHighRes && navigator.vibrate) navigator.vibrate(50);
+
+                    // [Apple Style]
+                    // 1. 更新資料與 UI（即使不切換車站，也要更新距離資訊）
+                    // 2. 震動回饋
+                    renderAll(true);
+
+                    if (!silent) {
+                        if (window.innerWidth < 768 && !silent && autoSwitchStop) {
+                            toggleStopList(false);
+                        }
+                    }
+
+                    if (isHighRes && navigator.vibrate && autoSwitchStop) navigator.vibrate(50);
                 }
 
                 // 如果這是高精度結果，則結束動畫

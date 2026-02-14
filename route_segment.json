@@ -1,0 +1,1234 @@
+[
+    {
+        "id": "1A|uni_station|sports_centre",
+        "route_id": "1A",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "sports_centre",
+        "expected_duration_sec": 111
+    },
+    {
+        "id": "1A|uni_station|sir_run_run",
+        "route_id": "1A",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "sir_run_run",
+        "expected_duration_sec": 221
+    },
+    {
+        "id": "1A|uni_station|uni_admin_building",
+        "route_id": "1A",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "uni_admin_building",
+        "expected_duration_sec": 326
+    },
+    {
+        "id": "1A|uni_station|shho",
+        "route_id": "1A",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "shho",
+        "expected_duration_sec": 471
+    },
+    {
+        "id": "1A|uni_station|uni_station_terminal",
+        "route_id": "1A",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "uni_station_terminal",
+        "expected_duration_sec": 581
+    },
+    {
+        "id": "1B|uni_station|jockey_club_post_grad_uphill",
+        "route_id": "1B",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "jockey_club_post_grad_uphill",
+        "expected_duration_sec": 130
+    },
+    {
+        "id": "1B|uni_station|sports_centre",
+        "route_id": "1B",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "sports_centre",
+        "expected_duration_sec": 228
+    },
+    {
+        "id": "1B|uni_station|sir_run_run",
+        "route_id": "1B",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "sir_run_run",
+        "expected_duration_sec": 338
+    },
+    {
+        "id": "1B|uni_station|uni_admin_building",
+        "route_id": "1B",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "uni_admin_building",
+        "expected_duration_sec": 443
+    },
+    {
+        "id": "1B|uni_station|shho",
+        "route_id": "1B",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "shho",
+        "expected_duration_sec": 588
+    },
+    {
+        "id": "1B|uni_station|jockey_club_post_grad_mtr_direction",
+        "route_id": "1B",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "jockey_club_post_grad_mtr_direction",
+        "expected_duration_sec": 686
+    },
+    {
+        "id": "1B|uni_station|uni_station_terminal",
+        "route_id": "1B",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "uni_station_terminal",
+        "expected_duration_sec": 826
+    },
+    {
+        "id": "2|piazza|sports_centre",
+        "route_id": "2",
+        "from_stop_id": "piazza",
+        "to_stop_id": "sports_centre",
+        "expected_duration_sec": 164
+    },
+    {
+        "id": "2|piazza|fung_king_hey_building",
+        "route_id": "2",
+        "from_stop_id": "piazza",
+        "to_stop_id": "fung_king_hey_building",
+        "expected_duration_sec": 364
+    },
+    {
+        "id": "2|piazza|united_college_drop_off",
+        "route_id": "2",
+        "from_stop_id": "piazza",
+        "to_stop_id": "united_college_drop_off",
+        "expected_duration_sec": 434
+    },
+    {
+        "id": "2|piazza|na_college",
+        "route_id": "2",
+        "from_stop_id": "piazza",
+        "to_stop_id": "na_college",
+        "expected_duration_sec": 518
+    },
+    {
+        "id": "2|piazza|united_college",
+        "route_id": "2",
+        "from_stop_id": "piazza",
+        "to_stop_id": "united_college",
+        "expected_duration_sec": 583
+    },
+    {
+        "id": "2|piazza|uni_admin_building",
+        "route_id": "2",
+        "from_stop_id": "piazza",
+        "to_stop_id": "uni_admin_building",
+        "expected_duration_sec": 676
+    },
+    {
+        "id": "2|piazza|shho",
+        "route_id": "2",
+        "from_stop_id": "piazza",
+        "to_stop_id": "shho",
+        "expected_duration_sec": 828
+    },
+    {
+        "id": "2|piazza|uni_station_terminal",
+        "route_id": "2",
+        "from_stop_id": "piazza",
+        "to_stop_id": "uni_station_terminal",
+        "expected_duration_sec": 933
+    },
+    {
+        "id": "2_sir_run_run|piazza|sports_centre",
+        "route_id": "2_sir_run_run",
+        "from_stop_id": "piazza",
+        "to_stop_id": "sports_centre",
+        "expected_duration_sec": 164
+    },
+    {
+        "id": "2_sir_run_run|piazza|sir_run_run",
+        "route_id": "2_sir_run_run",
+        "from_stop_id": "piazza",
+        "to_stop_id": "sir_run_run",
+        "expected_duration_sec": 284
+    },
+    {
+        "id": "2_sir_run_run|piazza|fung_king_hey_building",
+        "route_id": "2_sir_run_run",
+        "from_stop_id": "piazza",
+        "to_stop_id": "fung_king_hey_building",
+        "expected_duration_sec": 374
+    },
+    {
+        "id": "2_sir_run_run|piazza|united_college_drop_off",
+        "route_id": "2_sir_run_run",
+        "from_stop_id": "piazza",
+        "to_stop_id": "united_college_drop_off",
+        "expected_duration_sec": 444
+    },
+    {
+        "id": "2_sir_run_run|piazza|na_college",
+        "route_id": "2_sir_run_run",
+        "from_stop_id": "piazza",
+        "to_stop_id": "na_college",
+        "expected_duration_sec": 528
+    },
+    {
+        "id": "2_sir_run_run|piazza|united_college",
+        "route_id": "2_sir_run_run",
+        "from_stop_id": "piazza",
+        "to_stop_id": "united_college",
+        "expected_duration_sec": 593
+    },
+    {
+        "id": "2_sir_run_run|piazza|uni_admin_building",
+        "route_id": "2_sir_run_run",
+        "from_stop_id": "piazza",
+        "to_stop_id": "uni_admin_building",
+        "expected_duration_sec": 686
+    },
+    {
+        "id": "2_sir_run_run|piazza|shho",
+        "route_id": "2_sir_run_run",
+        "from_stop_id": "piazza",
+        "to_stop_id": "shho",
+        "expected_duration_sec": 838
+    },
+    {
+        "id": "2_sir_run_run|piazza|uni_station_terminal",
+        "route_id": "2_sir_run_run",
+        "from_stop_id": "piazza",
+        "to_stop_id": "uni_station_terminal",
+        "expected_duration_sec": 943
+    },
+    {
+        "id": "3|yia|sports_centre",
+        "route_id": "3",
+        "from_stop_id": "yia",
+        "to_stop_id": "sports_centre",
+        "expected_duration_sec": 80
+    },
+    {
+        "id": "3|yia|sci_centre",
+        "route_id": "3",
+        "from_stop_id": "yia",
+        "to_stop_id": "sci_centre",
+        "expected_duration_sec": 206
+    },
+    {
+        "id": "3|yia|fung_king_hey_building",
+        "route_id": "3",
+        "from_stop_id": "yia",
+        "to_stop_id": "fung_king_hey_building",
+        "expected_duration_sec": 286
+    },
+    {
+        "id": "3|yia|residences_3_4_shaw_direction",
+        "route_id": "3",
+        "from_stop_id": "yia",
+        "to_stop_id": "residences_3_4_shaw_direction",
+        "expected_duration_sec": 332
+    },
+    {
+        "id": "3|yia|shaw_college_north_direction",
+        "route_id": "3",
+        "from_stop_id": "yia",
+        "to_stop_id": "shaw_college_north_direction",
+        "expected_duration_sec": 435
+    },
+    {
+        "id": "3|yia|cwc_college",
+        "route_id": "3",
+        "from_stop_id": "yia",
+        "to_stop_id": "cwc_college",
+        "expected_duration_sec": 582
+    },
+    {
+        "id": "3|yia|residence_15",
+        "route_id": "3",
+        "from_stop_id": "yia",
+        "to_stop_id": "residence_15",
+        "expected_duration_sec": 645
+    },
+    {
+        "id": "3|yia|united_college_staff_residence",
+        "route_id": "3",
+        "from_stop_id": "yia",
+        "to_stop_id": "united_college_staff_residence",
+        "expected_duration_sec": 686
+    },
+    {
+        "id": "3|yia|chan_chun_ha_hostel",
+        "route_id": "3",
+        "from_stop_id": "yia",
+        "to_stop_id": "chan_chun_ha_hostel",
+        "expected_duration_sec": 740
+    },
+    {
+        "id": "3|yia|shaw_college_central_direction",
+        "route_id": "3",
+        "from_stop_id": "yia",
+        "to_stop_id": "shaw_college_central_direction",
+        "expected_duration_sec": 881
+    },
+    {
+        "id": "3|yia|residences_3_4_central_direction",
+        "route_id": "3",
+        "from_stop_id": "yia",
+        "to_stop_id": "residences_3_4_central_direction",
+        "expected_duration_sec": 955
+    },
+    {
+        "id": "3|yia|uni_admin_building",
+        "route_id": "3",
+        "from_stop_id": "yia",
+        "to_stop_id": "uni_admin_building",
+        "expected_duration_sec": 1056
+    },
+    {
+        "id": "3|yia|shho",
+        "route_id": "3",
+        "from_stop_id": "yia",
+        "to_stop_id": "shho",
+        "expected_duration_sec": 1173
+    },
+    {
+        "id": "3|yia|piazza_terminal",
+        "route_id": "3",
+        "from_stop_id": "yia",
+        "to_stop_id": "piazza_terminal",
+        "expected_duration_sec": 1323
+    },
+    {
+        "id": "4|yia|circuit_east_cwc_direction",
+        "route_id": "4",
+        "from_stop_id": "yia",
+        "to_stop_id": "circuit_east_cwc_direction",
+        "expected_duration_sec": 80
+    },
+    {
+        "id": "4|yia|cwc_college_only_to_area_39",
+        "route_id": "4",
+        "from_stop_id": "yia",
+        "to_stop_id": "cwc_college_only_to_area_39",
+        "expected_duration_sec": 166
+    },
+    {
+        "id": "4|yia|area_39_uphill",
+        "route_id": "4",
+        "from_stop_id": "yia",
+        "to_stop_id": "area_39_uphill",
+        "expected_duration_sec": 247
+    },
+    {
+        "id": "4|yia|cwc_college",
+        "route_id": "4",
+        "from_stop_id": "yia",
+        "to_stop_id": "cwc_college",
+        "expected_duration_sec": 317
+    },
+    {
+        "id": "4|yia|residence_15",
+        "route_id": "4",
+        "from_stop_id": "yia",
+        "to_stop_id": "residence_15",
+        "expected_duration_sec": 382
+    },
+    {
+        "id": "4|yia|united_college_staff_residence",
+        "route_id": "4",
+        "from_stop_id": "yia",
+        "to_stop_id": "united_college_staff_residence",
+        "expected_duration_sec": 442
+    },
+    {
+        "id": "4|yia|chan_chun_ha_hostel",
+        "route_id": "4",
+        "from_stop_id": "yia",
+        "to_stop_id": "chan_chun_ha_hostel",
+        "expected_duration_sec": 522
+    },
+    {
+        "id": "4|yia|shaw_college_central_direction",
+        "route_id": "4",
+        "from_stop_id": "yia",
+        "to_stop_id": "shaw_college_central_direction",
+        "expected_duration_sec": 662
+    },
+    {
+        "id": "4|yia|residences_3_4_central_direction",
+        "route_id": "4",
+        "from_stop_id": "yia",
+        "to_stop_id": "residences_3_4_central_direction",
+        "expected_duration_sec": 782
+    },
+    {
+        "id": "4|yia|na_college",
+        "route_id": "4",
+        "from_stop_id": "yia",
+        "to_stop_id": "na_college",
+        "expected_duration_sec": 867
+    },
+    {
+        "id": "4|yia|united_college",
+        "route_id": "4",
+        "from_stop_id": "yia",
+        "to_stop_id": "united_college",
+        "expected_duration_sec": 939
+    },
+    {
+        "id": "4|yia|uni_admin_building",
+        "route_id": "4",
+        "from_stop_id": "yia",
+        "to_stop_id": "uni_admin_building",
+        "expected_duration_sec": 1044
+    },
+    {
+        "id": "4|yia|shho",
+        "route_id": "4",
+        "from_stop_id": "yia",
+        "to_stop_id": "shho",
+        "expected_duration_sec": 1177
+    },
+    {
+        "id": "4|yia|uni_station_terminal",
+        "route_id": "4",
+        "from_stop_id": "yia",
+        "to_stop_id": "uni_station_terminal",
+        "expected_duration_sec": 1291
+    },
+    {
+        "id": "5_cwc|chung_chi_teaching_blocks|sports_centre",
+        "route_id": "5_cwc",
+        "from_stop_id": "chung_chi_teaching_blocks",
+        "to_stop_id": "sports_centre",
+        "expected_duration_sec": 110
+    },
+    {
+        "id": "5_cwc|chung_chi_teaching_blocks|sir_run_run",
+        "route_id": "5_cwc",
+        "from_stop_id": "chung_chi_teaching_blocks",
+        "to_stop_id": "sir_run_run",
+        "expected_duration_sec": 240
+    },
+    {
+        "id": "5_cwc|chung_chi_teaching_blocks|fung_king_hey_building",
+        "route_id": "5_cwc",
+        "from_stop_id": "chung_chi_teaching_blocks",
+        "to_stop_id": "fung_king_hey_building",
+        "expected_duration_sec": 330
+    },
+    {
+        "id": "5_cwc|chung_chi_teaching_blocks|united_college_drop_off",
+        "route_id": "5_cwc",
+        "from_stop_id": "chung_chi_teaching_blocks",
+        "to_stop_id": "united_college_drop_off",
+        "expected_duration_sec": 385
+    },
+    {
+        "id": "5_cwc|chung_chi_teaching_blocks|na_college_for_route_5",
+        "route_id": "5_cwc",
+        "from_stop_id": "chung_chi_teaching_blocks",
+        "to_stop_id": "na_college_for_route_5",
+        "expected_duration_sec": 469
+    },
+    {
+        "id": "5_cwc|chung_chi_teaching_blocks|residences_3_4_shaw_direction",
+        "route_id": "5_cwc",
+        "from_stop_id": "chung_chi_teaching_blocks",
+        "to_stop_id": "residences_3_4_shaw_direction",
+        "expected_duration_sec": 571
+    },
+    {
+        "id": "5_cwc|chung_chi_teaching_blocks|shaw_college_north_direction",
+        "route_id": "5_cwc",
+        "from_stop_id": "chung_chi_teaching_blocks",
+        "to_stop_id": "shaw_college_north_direction",
+        "expected_duration_sec": 674
+    },
+    {
+        "id": "5_cwc|chung_chi_teaching_blocks|cwc_college",
+        "route_id": "5_cwc",
+        "from_stop_id": "chung_chi_teaching_blocks",
+        "to_stop_id": "cwc_college",
+        "expected_duration_sec": 821
+    },
+    {
+        "id": "6A|cwc_college|united_college_staff_residence",
+        "route_id": "6A",
+        "from_stop_id": "cwc_college",
+        "to_stop_id": "united_college_staff_residence",
+        "expected_duration_sec": 80
+    },
+    {
+        "id": "6A|cwc_college|chan_chun_ha_hostel",
+        "route_id": "6A",
+        "from_stop_id": "cwc_college",
+        "to_stop_id": "chan_chun_ha_hostel",
+        "expected_duration_sec": 140
+    },
+    {
+        "id": "6A|cwc_college|residences_3_4_central_direction",
+        "route_id": "6A",
+        "from_stop_id": "cwc_college",
+        "to_stop_id": "residences_3_4_central_direction",
+        "expected_duration_sec": 200
+    },
+    {
+        "id": "6A|cwc_college|na_college",
+        "route_id": "6A",
+        "from_stop_id": "cwc_college",
+        "to_stop_id": "na_college",
+        "expected_duration_sec": 285
+    },
+    {
+        "id": "6A|cwc_college|united_college",
+        "route_id": "6A",
+        "from_stop_id": "cwc_college",
+        "to_stop_id": "united_college",
+        "expected_duration_sec": 357
+    },
+    {
+        "id": "6A|cwc_college|uni_admin_building",
+        "route_id": "6A",
+        "from_stop_id": "cwc_college",
+        "to_stop_id": "uni_admin_building",
+        "expected_duration_sec": 462
+    },
+    {
+        "id": "6A|cwc_college|shho",
+        "route_id": "6A",
+        "from_stop_id": "cwc_college",
+        "to_stop_id": "shho",
+        "expected_duration_sec": 592
+    },
+    {
+        "id": "6A|cwc_college|piazza_terminal",
+        "route_id": "6A",
+        "from_stop_id": "cwc_college",
+        "to_stop_id": "piazza_terminal",
+        "expected_duration_sec": 732
+    },
+    {
+        "id": "6A|cwc_college|chung_chi_teaching_blocks",
+        "route_id": "6A",
+        "from_stop_id": "cwc_college",
+        "to_stop_id": "chung_chi_teaching_blocks",
+        "expected_duration_sec": 786
+    },
+    {
+        "id": "6B|na_college|united_college",
+        "route_id": "6B",
+        "from_stop_id": "na_college",
+        "to_stop_id": "united_college",
+        "expected_duration_sec": 72
+    },
+    {
+        "id": "6B|na_college|uni_admin_building",
+        "route_id": "6B",
+        "from_stop_id": "na_college",
+        "to_stop_id": "uni_admin_building",
+        "expected_duration_sec": 177
+    },
+    {
+        "id": "6B|na_college|shho",
+        "route_id": "6B",
+        "from_stop_id": "na_college",
+        "to_stop_id": "shho",
+        "expected_duration_sec": 307
+    },
+    {
+        "id": "6B|na_college|piazza_terminal",
+        "route_id": "6B",
+        "from_stop_id": "na_college",
+        "to_stop_id": "piazza_terminal",
+        "expected_duration_sec": 447
+    },
+    {
+        "id": "6B|na_college|chung_chi_teaching_blocks",
+        "route_id": "6B",
+        "from_stop_id": "na_college",
+        "to_stop_id": "chung_chi_teaching_blocks",
+        "expected_duration_sec": 517
+    },
+    {
+        "id": "7|shaw_college_central_direction|residences_3_4_central_direction",
+        "route_id": "7",
+        "from_stop_id": "shaw_college_central_direction",
+        "to_stop_id": "residences_3_4_central_direction",
+        "expected_duration_sec": 75
+    },
+    {
+        "id": "7|shaw_college_central_direction|na_college",
+        "route_id": "7",
+        "from_stop_id": "shaw_college_central_direction",
+        "to_stop_id": "na_college",
+        "expected_duration_sec": 163
+    },
+    {
+        "id": "7|shaw_college_central_direction|united_college",
+        "route_id": "7",
+        "from_stop_id": "shaw_college_central_direction",
+        "to_stop_id": "united_college",
+        "expected_duration_sec": 225
+    },
+    {
+        "id": "7|shaw_college_central_direction|uni_admin_building",
+        "route_id": "7",
+        "from_stop_id": "shaw_college_central_direction",
+        "to_stop_id": "uni_admin_building",
+        "expected_duration_sec": 330
+    },
+    {
+        "id": "7|shaw_college_central_direction|shho",
+        "route_id": "7",
+        "from_stop_id": "shaw_college_central_direction",
+        "to_stop_id": "shho",
+        "expected_duration_sec": 458
+    },
+    {
+        "id": "7|shaw_college_central_direction|piazza_terminal",
+        "route_id": "7",
+        "from_stop_id": "shaw_college_central_direction",
+        "to_stop_id": "piazza_terminal",
+        "expected_duration_sec": 608
+    },
+    {
+        "id": "7|shaw_college_central_direction|chung_chi_teaching_blocks",
+        "route_id": "7",
+        "from_stop_id": "shaw_college_central_direction",
+        "to_stop_id": "chung_chi_teaching_blocks",
+        "expected_duration_sec": 678
+    },
+    {
+        "id": "8|area_39_uphill|cwc_college",
+        "route_id": "8",
+        "from_stop_id": "area_39_uphill",
+        "to_stop_id": "cwc_college",
+        "expected_duration_sec": 70
+    },
+    {
+        "id": "8|area_39_uphill|united_college_staff_residence",
+        "route_id": "8",
+        "from_stop_id": "area_39_uphill",
+        "to_stop_id": "united_college_staff_residence",
+        "expected_duration_sec": 150
+    },
+    {
+        "id": "8|area_39_uphill|chan_chun_ha_hostel",
+        "route_id": "8",
+        "from_stop_id": "area_39_uphill",
+        "to_stop_id": "chan_chun_ha_hostel",
+        "expected_duration_sec": 210
+    },
+    {
+        "id": "8|area_39_uphill|shaw_college_central_direction",
+        "route_id": "8",
+        "from_stop_id": "area_39_uphill",
+        "to_stop_id": "shaw_college_central_direction",
+        "expected_duration_sec": 345
+    },
+    {
+        "id": "8|area_39_uphill|residences_3_4_central_direction",
+        "route_id": "8",
+        "from_stop_id": "area_39_uphill",
+        "to_stop_id": "residences_3_4_central_direction",
+        "expected_duration_sec": 419
+    },
+    {
+        "id": "8|area_39_uphill|uni_admin_building",
+        "route_id": "8",
+        "from_stop_id": "area_39_uphill",
+        "to_stop_id": "uni_admin_building",
+        "expected_duration_sec": 520
+    },
+    {
+        "id": "8|area_39_uphill|sci_centre",
+        "route_id": "8",
+        "from_stop_id": "area_39_uphill",
+        "to_stop_id": "sci_centre",
+        "expected_duration_sec": 646
+    },
+    {
+        "id": "8|area_39_uphill|na_college_backhill",
+        "route_id": "8",
+        "from_stop_id": "area_39_uphill",
+        "to_stop_id": "na_college_backhill",
+        "expected_duration_sec": 733
+    },
+    {
+        "id": "8|area_39_uphill|united_college",
+        "route_id": "8",
+        "from_stop_id": "area_39_uphill",
+        "to_stop_id": "united_college",
+        "expected_duration_sec": 781
+    },
+    {
+        "id": "8|area_39_uphill|residences_3_4_shaw_direction",
+        "route_id": "8",
+        "from_stop_id": "area_39_uphill",
+        "to_stop_id": "residences_3_4_shaw_direction",
+        "expected_duration_sec": 833
+    },
+    {
+        "id": "8|area_39_uphill|shaw_college_north_direction",
+        "route_id": "8",
+        "from_stop_id": "area_39_uphill",
+        "to_stop_id": "shaw_college_north_direction",
+        "expected_duration_sec": 923
+    },
+    {
+        "id": "8|area_39_uphill|area_39_downhill",
+        "route_id": "8",
+        "from_stop_id": "area_39_uphill",
+        "to_stop_id": "area_39_downhill",
+        "expected_duration_sec": 1083
+    },
+    {
+        "id": "8|area_39_uphill|circuit_north",
+        "route_id": "8",
+        "from_stop_id": "area_39_uphill",
+        "to_stop_id": "circuit_north",
+        "expected_duration_sec": 1158
+    },
+    {
+        "id": "8|area_39_uphill|circuit_east_mtr_direction",
+        "route_id": "8",
+        "from_stop_id": "area_39_uphill",
+        "to_stop_id": "circuit_east_mtr_direction",
+        "expected_duration_sec": 1244
+    },
+    {
+        "id": "8|area_39_uphill|uni_station_terminal",
+        "route_id": "8",
+        "from_stop_id": "area_39_uphill",
+        "to_stop_id": "uni_station_terminal",
+        "expected_duration_sec": 1324
+    },
+    {
+        "id": "H|uni_station|sports_centre",
+        "route_id": "H",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "sports_centre",
+        "expected_duration_sec": 99
+    },
+    {
+        "id": "H|uni_station|sir_run_run",
+        "route_id": "H",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "sir_run_run",
+        "expected_duration_sec": 214
+    },
+    {
+        "id": "H|uni_station|na_college_backhill",
+        "route_id": "H",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "na_college_backhill",
+        "expected_duration_sec": 301
+    },
+    {
+        "id": "H|uni_station|united_college_backhill",
+        "route_id": "H",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "united_college_backhill",
+        "expected_duration_sec": 349
+    },
+    {
+        "id": "H|uni_station|residences_3_4_shaw_direction",
+        "route_id": "H",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "residences_3_4_shaw_direction",
+        "expected_duration_sec": 401
+    },
+    {
+        "id": "H|uni_station|shaw_college_north_direction",
+        "route_id": "H",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "shaw_college_north_direction",
+        "expected_duration_sec": 491
+    },
+    {
+        "id": "H|uni_station|cwc_college",
+        "route_id": "H",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "cwc_college",
+        "expected_duration_sec": 638
+    },
+    {
+        "id": "H|uni_station|residence_10",
+        "route_id": "H",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "residence_10",
+        "expected_duration_sec": 701
+    },
+    {
+        "id": "H|uni_station|residence_15",
+        "route_id": "H",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "residence_15",
+        "expected_duration_sec": 743
+    },
+    {
+        "id": "H|uni_station|united_college_staff_residence",
+        "route_id": "H",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "united_college_staff_residence",
+        "expected_duration_sec": 785
+    },
+    {
+        "id": "H|uni_station|chan_chun_ha_hostel",
+        "route_id": "H",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "chan_chun_ha_hostel",
+        "expected_duration_sec": 835
+    },
+    {
+        "id": "H|uni_station|shaw_college_central_direction",
+        "route_id": "H",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "shaw_college_central_direction",
+        "expected_duration_sec": 957
+    },
+    {
+        "id": "H|uni_station|residences_3_4_central_direction",
+        "route_id": "H",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "residences_3_4_central_direction",
+        "expected_duration_sec": 1032
+    },
+    {
+        "id": "H|uni_station|na_college",
+        "route_id": "H",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "na_college",
+        "expected_duration_sec": 1120
+    },
+    {
+        "id": "H|uni_station|united_college",
+        "route_id": "H",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "united_college",
+        "expected_duration_sec": 1182
+    },
+    {
+        "id": "H|uni_station|uni_admin_building",
+        "route_id": "H",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "uni_admin_building",
+        "expected_duration_sec": 1287
+    },
+    {
+        "id": "H|uni_station|shho",
+        "route_id": "H",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "shho",
+        "expected_duration_sec": 1407
+    },
+    {
+        "id": "H|uni_station|uni_station_terminal",
+        "route_id": "H",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "uni_station_terminal",
+        "expected_duration_sec": 1521
+    },
+    {
+        "id": "H_area_39|uni_station|sports_centre",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "sports_centre",
+        "expected_duration_sec": 99
+    },
+    {
+        "id": "H_area_39|uni_station|sir_run_run",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "sir_run_run",
+        "expected_duration_sec": 214
+    },
+    {
+        "id": "H_area_39|uni_station|na_college_backhill",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "na_college_backhill",
+        "expected_duration_sec": 301
+    },
+    {
+        "id": "H_area_39|uni_station|united_college_backhill",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "united_college_backhill",
+        "expected_duration_sec": 349
+    },
+    {
+        "id": "H_area_39|uni_station|residences_3_4_shaw_direction",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "residences_3_4_shaw_direction",
+        "expected_duration_sec": 401
+    },
+    {
+        "id": "H_area_39|uni_station|shaw_college_north_direction",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "shaw_college_north_direction",
+        "expected_duration_sec": 491
+    },
+    {
+        "id": "H_area_39|uni_station|area_39_uphill",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "area_39_uphill",
+        "expected_duration_sec": 651
+    },
+    {
+        "id": "H_area_39|uni_station|cwc_college",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "cwc_college",
+        "expected_duration_sec": 726
+    },
+    {
+        "id": "H_area_39|uni_station|residence_10",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "residence_10",
+        "expected_duration_sec": 789
+    },
+    {
+        "id": "H_area_39|uni_station|residence_15",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "residence_15",
+        "expected_duration_sec": 831
+    },
+    {
+        "id": "H_area_39|uni_station|united_college_staff_residence",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "united_college_staff_residence",
+        "expected_duration_sec": 873
+    },
+    {
+        "id": "H_area_39|uni_station|chan_chun_ha_hostel",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "chan_chun_ha_hostel",
+        "expected_duration_sec": 923
+    },
+    {
+        "id": "H_area_39|uni_station|shaw_college_central_direction",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "shaw_college_central_direction",
+        "expected_duration_sec": 1045
+    },
+    {
+        "id": "H_area_39|uni_station|residences_3_4_central_direction",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "residences_3_4_central_direction",
+        "expected_duration_sec": 1120
+    },
+    {
+        "id": "H_area_39|uni_station|na_college",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "na_college",
+        "expected_duration_sec": 1208
+    },
+    {
+        "id": "H_area_39|uni_station|united_college",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "united_college",
+        "expected_duration_sec": 1270
+    },
+    {
+        "id": "H_area_39|uni_station|uni_admin_building",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "uni_admin_building",
+        "expected_duration_sec": 1375
+    },
+    {
+        "id": "H_area_39|uni_station|shho",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "shho",
+        "expected_duration_sec": 1495
+    },
+    {
+        "id": "H_area_39|uni_station|uni_station_terminal",
+        "route_id": "H_area_39",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "uni_station_terminal",
+        "expected_duration_sec": 1609
+    },
+    {
+        "id": "N|uni_station|sports_centre",
+        "route_id": "N",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "sports_centre",
+        "expected_duration_sec": 99
+    },
+    {
+        "id": "N|uni_station|sir_run_run",
+        "route_id": "N",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "sir_run_run",
+        "expected_duration_sec": 214
+    },
+    {
+        "id": "N|uni_station|na_college_backhill",
+        "route_id": "N",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "na_college_backhill",
+        "expected_duration_sec": 301
+    },
+    {
+        "id": "N|uni_station|united_college_backhill",
+        "route_id": "N",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "united_college_backhill",
+        "expected_duration_sec": 349
+    },
+    {
+        "id": "N|uni_station|residences_3_4_shaw_direction",
+        "route_id": "N",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "residences_3_4_shaw_direction",
+        "expected_duration_sec": 401
+    },
+    {
+        "id": "N|uni_station|shaw_college_north_direction",
+        "route_id": "N",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "shaw_college_north_direction",
+        "expected_duration_sec": 491
+    },
+    {
+        "id": "N|uni_station|area_39_uphill",
+        "route_id": "N",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "area_39_uphill",
+        "expected_duration_sec": 651
+    },
+    {
+        "id": "N|uni_station|cwc_college",
+        "route_id": "N",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "cwc_college",
+        "expected_duration_sec": 726
+    },
+    {
+        "id": "N|uni_station|residence_15",
+        "route_id": "N",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "residence_15",
+        "expected_duration_sec": 776
+    },
+    {
+        "id": "N|uni_station|united_college_staff_residence",
+        "route_id": "N",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "united_college_staff_residence",
+        "expected_duration_sec": 816
+    },
+    {
+        "id": "N|uni_station|chan_chun_ha_hostel",
+        "route_id": "N",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "chan_chun_ha_hostel",
+        "expected_duration_sec": 862
+    },
+    {
+        "id": "N|uni_station|shaw_college_central_direction",
+        "route_id": "N",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "shaw_college_central_direction",
+        "expected_duration_sec": 984
+    },
+    {
+        "id": "N|uni_station|residences_3_4_central_direction",
+        "route_id": "N",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "residences_3_4_central_direction",
+        "expected_duration_sec": 1059
+    },
+    {
+        "id": "N|uni_station|na_college",
+        "route_id": "N",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "na_college",
+        "expected_duration_sec": 1147
+    },
+    {
+        "id": "N|uni_station|united_college",
+        "route_id": "N",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "united_college",
+        "expected_duration_sec": 1209
+    },
+    {
+        "id": "N|uni_station|uni_admin_building",
+        "route_id": "N",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "uni_admin_building",
+        "expected_duration_sec": 1314
+    },
+    {
+        "id": "N|uni_station|shho",
+        "route_id": "N",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "shho",
+        "expected_duration_sec": 1442
+    },
+    {
+        "id": "N|uni_station|uni_station_terminal",
+        "route_id": "N",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "uni_station_terminal",
+        "expected_duration_sec": 1556
+    },
+    {
+        "id": "N_postgrad|uni_station|jockey_club_post_grad_uphill",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "jockey_club_post_grad_uphill",
+        "expected_duration_sec": 130
+    },
+    {
+        "id": "N_postgrad|uni_station|sports_centre",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "sports_centre",
+        "expected_duration_sec": 228
+    },
+    {
+        "id": "N_postgrad|uni_station|sir_run_run",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "sir_run_run",
+        "expected_duration_sec": 343
+    },
+    {
+        "id": "N_postgrad|uni_station|na_college_backhill",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "na_college_backhill",
+        "expected_duration_sec": 430
+    },
+    {
+        "id": "N_postgrad|uni_station|united_college_backhill",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "united_college_backhill",
+        "expected_duration_sec": 478
+    },
+    {
+        "id": "N_postgrad|uni_station|residences_3_4_shaw_direction",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "residences_3_4_shaw_direction",
+        "expected_duration_sec": 530
+    },
+    {
+        "id": "N_postgrad|uni_station|shaw_college_north_direction",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "shaw_college_north_direction",
+        "expected_duration_sec": 620
+    },
+    {
+        "id": "N_postgrad|uni_station|area_39_uphill",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "area_39_uphill",
+        "expected_duration_sec": 780
+    },
+    {
+        "id": "N_postgrad|uni_station|cwc_college",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "cwc_college",
+        "expected_duration_sec": 855
+    },
+    {
+        "id": "N_postgrad|uni_station|residence_15",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "residence_15",
+        "expected_duration_sec": 905
+    },
+    {
+        "id": "N_postgrad|uni_station|united_college_staff_residence",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "united_college_staff_residence",
+        "expected_duration_sec": 945
+    },
+    {
+        "id": "N_postgrad|uni_station|chan_chun_ha_hostel",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "chan_chun_ha_hostel",
+        "expected_duration_sec": 991
+    },
+    {
+        "id": "N_postgrad|uni_station|shaw_college_central_direction",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "shaw_college_central_direction",
+        "expected_duration_sec": 1113
+    },
+    {
+        "id": "N_postgrad|uni_station|residences_3_4_central_direction",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "residences_3_4_central_direction",
+        "expected_duration_sec": 1188
+    },
+    {
+        "id": "N_postgrad|uni_station|na_college",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "na_college",
+        "expected_duration_sec": 1276
+    },
+    {
+        "id": "N_postgrad|uni_station|united_college",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "united_college",
+        "expected_duration_sec": 1338
+    },
+    {
+        "id": "N_postgrad|uni_station|uni_admin_building",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "uni_admin_building",
+        "expected_duration_sec": 1443
+    },
+    {
+        "id": "N_postgrad|uni_station|shho",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "shho",
+        "expected_duration_sec": 1571
+    },
+    {
+        "id": "N_postgrad|uni_station|jockey_club_post_grad_mtr_direction",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "jockey_club_post_grad_mtr_direction",
+        "expected_duration_sec": 1669
+    },
+    {
+        "id": "N_postgrad|uni_station|uni_station_terminal",
+        "route_id": "N_postgrad",
+        "from_stop_id": "uni_station",
+        "to_stop_id": "uni_station_terminal",
+        "expected_duration_sec": 1809
+    }
+]

@@ -28,11 +28,9 @@
         let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {
             stopId: '', lang: 'zh', isDark: window.matchMedia('(prefers-color-scheme: dark)').matches, mode: (new Date().getDay() === 0) ? 'sunday' : 'weekday'
         };
-        // [Location Priority] 每次開啟皆清除 stopId，強制啟動自動定位邏輯
+        // [Location Priority] 優先使用記憶的 stopId，稍後由 loadData 內的 GPS 邏輯決定是否覆蓋
         let { lang, isDark, mode: currentMode } = settings;
-        let currentStopId = '';
-        // 額外確保：即使 settings 裡有，也不使用它
-        settings.stopId = '';
+        let currentStopId = settings.stopId || '';
         
         // Apply Dark Mode immediately
         if (isDark) document.documentElement.classList.add('dark');
@@ -148,6 +146,18 @@
         .animate-apple-spin {
             animation: apple-rotation 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        
+        /* [Feature] Mobile Locating Spinner */
+        .locating-spinner {
+            background: transparent !important;
+            border: 2px solid rgba(0, 122, 255, 0.3);
+            border-top-color: #007AFF;
+            border-radius: 50%;
+            width: 14px !important; /* Slightly larger than the dot */
+            height: 14px !important;
+            box-shadow: none !important;
+            animation: apple-rotation 1s linear infinite;
+        }
     </style>
 </head>
 <body class="bg-apple-gray dark:bg-[#000000] text-slate-900 dark:text-slate-100 min-h-screen font-sans antialiased tracking-tight">
@@ -198,7 +208,8 @@
                     <div class="apple-card rounded-[24px] overflow-hidden">
                         <button onclick="toggleStopList()" class="w-full py-4 px-5 flex items-center justify-between md:hidden transition-colors">
                             <div class="flex items-center gap-3">
-                                <div class="w-2 h-2 rounded-full bg-apple-accent shadow-[0_0_8px_rgba(0,122,255,0.5)]"></div>
+                                <!-- [Feature] ID added for animation state -->
+                                <div id="mobile-status-dot" class="w-2 h-2 rounded-full bg-apple-accent shadow-[0_0_8px_rgba(0,122,255,0.5)] transition-all"></div>
                                 <span id="mobile-current-stop" class="font-semibold text-sm text-slate-900 dark:text-white">Select Stop</span>
                             </div>
                             <svg id="stop-chevron" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>
@@ -309,12 +320,158 @@
     </div>
 
     <script>
-        const DATA_URL = 'bus_data.json';
+        // [Refactor] Removed DATA_URL, using ScheduleEngine instead
         // SETTINGS_KEY and variables are now defined in HEAD (Global scope)
         // [Feature] Added routes array
-        let db = { stops: [], arrivals: [], route_times: [], routes: [] };
+        let db = { stops: [], arrivals: [], route_times: [], routes: [], segments: [] };
 
         const urlParams = new URLSearchParams(window.location.search);
+        
+        // [Stage 1] Schedule Engine for Client-side Calculation
+        const ScheduleEngine = {
+            timeToMins: (timeStr) => {
+                if (!timeStr) return 0;
+                const [h, m] = timeStr.split(':').map(Number);
+                return h * 60 + m;
+            },
+
+            isRouteActive: (route, mode) => {
+                if (!route || !route.operating_day_type) return false;
+                const dayType = route.operating_day_type;
+                if (mode === 'sunday') return dayType.includes('SUN') || dayType.includes('HOLIDAY');
+                if (mode === 'nonteaching') return dayType === 'MON_TO_SAT';
+                if (mode === 'weekday') return dayType.includes('MON_TO_SAT') || dayType.includes('TEACHING_ONLY');
+                return false;
+            },
+
+            initRouteTimes: () => {
+                const times = {};
+                if (!db.routes) return times;
+                db.routes.forEach(r => {
+                    times[r.id] = {
+                        starttime: (r.open_time || '00:00').substring(0, 5),
+                        endtime: (r.close_time || '23:59').substring(0, 5),
+                        frequency: 'Check Sched'
+                    };
+                });
+                return times;
+            },
+
+            getArrivals: (nowDate) => {
+                if (!db.routes || !db.segments || !db.stops) return [];
+                const currentMins = nowDate.getHours() * 60 + nowDate.getMinutes();
+                const isSaturday = nowDate.getDay() === 6;
+                const arrivals = [];
+                
+                const stopMap = {};
+                db.stops.forEach(s => stopMap[s.id] = s);
+
+                // Pre-group segments by route to avoid repetitive filtering in loops
+                const segmentsByRoute = {};
+                db.segments.forEach(s => {
+                    if (!segmentsByRoute[s.route_id]) segmentsByRoute[s.route_id] = [];
+                    segmentsByRoute[s.route_id].push(s);
+                });
+
+                db.routes.forEach(route => {
+                    // [Fix] Instant Switch: Generate ALL modes upfront, filter only during render
+                    // However, we must respect strict day constraints if today is physically Saturday
+                    
+                    // Rule 1: Exclude Mon-Fri routes on Saturday (e.g., 6B)
+                    if (isSaturday && route.operating_day_type.includes('MON_TO_FRI')) return;
+
+                    const openMins = ScheduleEngine.timeToMins(route.open_time);
+                    let closeMins = ScheduleEngine.timeToMins(route.close_time);
+
+                    // Rule 2: Early close for Routes 5, 6A, 7 on Saturday (approx 13:xx last bus)
+                    if (isSaturday && ['5_cwc', '6A', '7'].includes(route.id)) {
+                        closeMins = Math.min(closeMins, ScheduleEngine.timeToMins('13:26:00'));
+                    }
+                    
+                    // [Fix] Handle departure_mins_json safely (it might be a string in some raw data, though file says array)
+                    let depMins = route.departure_mins_json;
+                    if (typeof depMins === 'string') {
+                        try { depMins = JSON.parse(depMins); } catch(e) { depMins = []; }
+                    }
+                    if (!Array.isArray(depMins)) depMins = [];
+                    depMins = depMins.map(Number);
+
+                    const startHour = Math.floor(openMins / 60);
+                    const endHour = Math.floor(closeMins / 60);
+
+                    // Loop through each operating hour
+                    for (let h = startHour; h <= endHour + 1; h++) {
+                        depMins.forEach(m => {
+                            const tripStartMins = h * 60 + m;
+                            
+                            // Check if this specific trip is within operating window
+                            if (tripStartMins < openMins || tripStartMins > closeMins) return;
+
+                            const routeSegments = segmentsByRoute[route.id] || [];
+                            
+                            // [Fix] Add Origin Stop (Departure) Logic
+                            if (routeSegments.length > 0) {
+                                // Assume all segments for a route share the same origin (from_stop_id)
+                                const originId = routeSegments[0].from_stop_id;
+                                
+                                // Process Origin Stop
+                                let originDiff = tripStartMins - currentMins;
+                                if (originDiff < -720) originDiff += 1440;
+                                else if (originDiff > 720) originDiff -= 1440;
+
+                                if (originDiff >= -5 && originDiff <= 90) {
+                                    const arrH = Math.floor(tripStartMins / 60) % 24;
+                                    const arrM = tripStartMins % 60;
+                                    const timeStr = `${arrH.toString().padStart(2, '0')}:${arrM.toString().padStart(2, '0')}`;
+                                    const originStop = stopMap[originId];
+
+                                    arrivals.push({
+                                        route_id: route.id,
+                                        route_name: lang === 'zh' ? route.name_zh : route.name_en,
+                                        stop_id: originId,
+                                        stop_name: originStop ? (lang === 'zh' ? originStop.name_zh : originStop.name_en) : originId,
+                                        arrival_time: timeStr,
+                                        day_type: route.operating_day_type,
+                                        order_seq: tripStartMins
+                                    });
+                                }
+                            }
+
+                            routeSegments.forEach(seg => {
+                                // Calculate arrival at this specific stop
+                                const arrivalMins = tripStartMins + Math.ceil(seg.expected_duration_sec / 60);
+                                
+                                // Calculate difference (handle midnight crossing logic via helper later, but raw diff here)
+                                let diff = arrivalMins - currentMins;
+                                // Handle midnight wrap-around for display filtering (e.g., current 23:50, arrival 00:10 -> diff should be +20)
+                                if (diff < -720) diff += 1440;
+                                else if (diff > 720) diff -= 1440;
+
+                                // Filter: Show buses arriving soon (up to 90 mins) or just left
+                                if (diff >= -5 && diff <= 90) {
+                                    const arrH = Math.floor(arrivalMins / 60) % 24;
+                                    const arrM = arrivalMins % 60;
+                                    const timeStr = `${arrH.toString().padStart(2, '0')}:${arrM.toString().padStart(2, '0')}`;
+
+                                    const targetStop = stopMap[seg.to_stop_id];
+                                    arrivals.push({
+                                        route_id: route.id,
+                                        route_name: lang === 'zh' ? route.name_zh : route.name_en,
+                                        stop_id: seg.to_stop_id,
+                                        stop_name: targetStop ? (lang === 'zh' ? targetStop.name_zh : targetStop.name_en) : seg.to_stop_id,
+                                        arrival_time: timeStr,
+                                        day_type: route.operating_day_type,
+                                        order_seq: arrivalMins
+                                    });
+                                }
+                            });
+                        });
+                    }
+                });
+
+                return arrivals.sort((a, b) => a.order_seq - b.order_seq);
+            }
+        };
         let mockTime = urlParams.get('time');
 
         let isStopListOpen = false, expandedTripId = null;
@@ -352,8 +509,8 @@
         }
 
         const i18n = {
-            zh: { weekday: '平日/教學日', sunday: '假日/週日', arrival: '實時到站', empty: '當前時段無班次', arrived: '已抵達', soon: '即將', unit: '分', search: '搜尋車站...', next: '後續車站 (預計)', term: '終點站' },
-            en: { weekday: 'Weekday', sunday: 'Weekend/Holiday', arrival: 'Real-time Arrivals', empty: 'No service at this time', arrived: 'Arrived', soon: 'Soon', unit: 'min', search: 'Search stops...', next: 'Trip Timeline', term: 'Terminus' }
+            zh: { weekday: '教學日', nonteaching: '非教學日', sunday: '假日/週日', arrival: '實時到站', empty: '當前時段無班次', arrived: '已抵達', soon: '即將', unit: '分', search: '搜尋車站...', next: '後續車站 (預計)', term: '終點站' },
+            en: { weekday: 'Teaching', nonteaching: 'Non-Teaching', sunday: 'Sun/Holiday', arrival: 'Real-time Arrivals', empty: 'No service at this time', arrived: 'Arrived', soon: 'Soon', unit: 'min', search: 'Search stops...', next: 'Trip Timeline', term: 'Terminus' }
         };
 
         window.onload = () => {
@@ -363,6 +520,9 @@
             updateClock();
             setInterval(updateClock, 1000);
             setInterval(updateRefreshUI, 1000); // Stage 3 Ticker
+            
+            // [Fix] Render static UI immediately before data loads
+            renderModeSelector();
             
             // 統一由 loadData 內部控制定位時機
             loadData();
@@ -425,16 +585,13 @@
         }
 
         async function loadData(isAutoRefresh = false) {
-            // [Feature] Reset Timer & Bar Instantly (Apple Style Smooth Reset)
+            // [Feature] Reset Timer & Bar Instantly
             refreshTimer = 0;
             const bar = document.getElementById('refresh-bar');
             if (bar) {
-                // 1. 暫時關閉動畫，瞬間歸零
                 bar.style.transition = 'none';
                 bar.style.width = '0%';
-                // 2. 強制瀏覽器重繪 (Force Reflow)
                 void bar.offsetWidth;
-                // 3. 恢復動畫 (下一秒 updateRefreshUI 會接手)
                 bar.style.transition = 'width 1s linear';
             }
 
@@ -444,47 +601,75 @@
 
             const btn = document.getElementById('refresh-btn');
             if (!isAutoRefresh) {
-                // 強制重啟動畫：先移除 class，觸發 reflow，再重新加入
                 btn.classList.remove('animate-apple-spin');
-                void btn.offsetWidth; // Trigger reflow
+                void btn.offsetWidth;
                 btn.classList.add('animate-apple-spin');
-                // 動畫結束後自動移除，以便下次點擊
                 setTimeout(() => btn.classList.remove('animate-apple-spin'), 800);
             }
             
-            // Skeleton only on very first empty load
+            // Initial Loading State
             if (db.stops.length === 0) document.getElementById('bus-list').innerHTML = Array(4).fill(0).map(() => `<div class="h-14 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 animate-pulse"></div>`).join('');
             
             try {
-                const busPromise = fetch(DATA_URL + '?t=' + Date.now(), { signal }).then(r => r.json());
-                const routePromise = (db.routes.length === 0) ? fetch('route.json', { signal }).then(r => r.json()) : Promise.resolve(null);
+                // [Stage 1] Force fetch all 3 core JSON files
+                console.log('[BusVibe] Fetching JSON data...');
                 
-                const [busData, routeData] = await Promise.all([busPromise, routePromise]);
-                
-                db.stops = busData.stops;
-                db.arrivals = busData.arrivals;
-                db.route_times = busData.route_times;
-                if (routeData) db.routes = routeData;
+                const fetchJson = async (url) => {
+                    const res = await fetch(url, { signal });
+                    if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
+                    return res.json();
+                };
 
-                // [Location Flow] 如果是第一次加載，且還沒有選定車站，強制觸發定位
-                // 必須在 db.stops 賦值後執行，findNearestStop 才有數據可算
+                const requests = [
+                    (db.stops.length === 0) ? fetchJson('stop.json') : Promise.resolve(null),
+                    (db.routes.length === 0) ? fetchJson('route.json') : Promise.resolve(null),
+                    (db.segments.length === 0) ? fetchJson('route_segment.json') : Promise.resolve(null)
+                ];
+
+                const [stopRes, routeRes, segRes] = await Promise.all(requests);
+
+                if (stopRes) db.stops = stopRes;
+                if (routeRes) db.routes = routeRes;
+                if (segRes) db.segments = segRes;
+
+                // Validate Data Integrity
+                if (!Array.isArray(db.stops) || !Array.isArray(db.routes)) {
+                    throw new Error('Invalid JSON format: stops or routes is not an array');
+                }
+
+                // [Stage 1] Real-time Calculation
+                db.route_times = ScheduleEngine.initRouteTimes();
+                // Safety: Ensure ScheduleEngine returns array even if no data
+                db.arrivals = ScheduleEngine.getArrivals(getNow()) || [];
+                
+                console.log(`[BusVibe] Loaded: Stops(${db.stops.length}), Routes(${db.routes.length}), Arrivals(${db.arrivals.length})`);
+
+                // [Fix] Ensure currentStopId is set if empty
+                if (!currentStopId && db.stops.length > 0) {
+                    currentStopId = db.stops[0].id;
+                }
+                
+                // Update UI labels immediately (safe even if currentStopId is null)
+                updateStopLabels();
+
+                // [Location Flow] Attempt GPS on first load
                 if (isFirstLoad) {
                     findNearestStop(true);
                 }
 
                 if (!isFirstLoad && !isAutoRefresh && navigator.vibrate) navigator.vibrate(10);
                 
+                // [Fix] Always render fully on first valid data load
                 if (isFirstLoad) {
                     isFirstLoad = false;
-                    // 初始渲染，如果定位還沒回來，會先顯示第一個站
-                    if (!currentStopId && db.stops.length > 0) currentStopId = db.stops[0].id;
                     renderAll(true);
                 } else {
-                    renderAll(false); // Subsequent loads don't rebuild stop grid (prevents scroll jump)
+                    renderAll(false);
                 }
             } catch (e) {
                 if (e.name !== 'AbortError') {
-                    console.error(e);
+                    console.error('[BusVibe] Data Load Error:', e);
+                    document.getElementById('bus-list').innerHTML = `<div class="p-4 text-center text-red-500 bg-red-50 rounded-lg text-xs">數據加載失敗<br>${e.message}</div>`;
                 }
             }
         }
@@ -507,31 +692,44 @@
         }
 
         function renderModeSelector() {
-            const modes = ['weekday', 'sunday'];
+            // [Stage 2] Added nonteaching mode
+            const modes = ['weekday', 'nonteaching', 'sunday'];
             document.getElementById('mode-selector').innerHTML = modes.map(m => `
-                <button onclick="changeMode('${m}')" class="flex-1 py-1.5 text-[12px] font-semibold rounded-[9px] transition-all duration-300 ${currentMode === m ? 'bg-white dark:bg-[#3A3A3C] text-black dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'}">
+                <button onclick="changeMode('${m}')" class="flex-1 py-1.5 text-[10px] sm:text-[12px] font-semibold rounded-[9px] transition-all duration-300 ${currentMode === m ? 'bg-white dark:bg-[#3A3A3C] text-black dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'}">
                     ${i18n[lang][m]}
                 </button>
             `).join('');
         }
 
         function renderStopGrid() {
-            const query = document.getElementById('stop-search').value.toLowerCase();
+            const query = (document.getElementById('stop-search')?.value || '').toLowerCase();
             const container = document.getElementById('stop-grid');
+            if (!container) return;
+
             const now = getNow();
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
+            // [Safety] Handle empty arrivals gracefully
+            const safeArrivals = db.arrivals || [];
+
             // Stage 4: Map routes to stops for better search
             const stopRoutesMap = {};
-            db.arrivals.forEach(arr => {
+            safeArrivals.forEach(arr => {
                 if (!stopRoutesMap[arr.stop_id]) stopRoutesMap[arr.stop_id] = new Set();
-                stopRoutesMap[arr.stop_id].add(arr.route_name.toLowerCase());
+                stopRoutesMap[arr.stop_id].add((arr.route_name || '').toLowerCase());
             });
 
             const busCounts = {};
-            db.arrivals.forEach(arr => {
+            safeArrivals.forEach(arr => {
                 const dt = arr.day_type || "";
-                const isMatch = (currentMode === 'weekday') ? (dt.includes('MON') || dt === 'N' || dt === "") : (dt.includes('SUN') || dt.includes('HOLIDAY') || dt === 'N');
+                let isMatch = false;
+                if (currentMode === 'weekday') {
+                    isMatch = dt.includes('MON') || dt === 'N' || dt === '';
+                } else if (currentMode === 'nonteaching') {
+                    isMatch = dt.includes('MON') && !dt.includes('TEACHING');
+                } else if (currentMode === 'sunday') {
+                    isMatch = dt.includes('SUN') || dt.includes('HOLIDAY') || dt === 'N';
+                }
                 if (!isMatch) return;
 
                 // [Fix A] Use helper
@@ -552,8 +750,8 @@
             // Stage 2: Distance Calculation & Sorting
             filteredStops = filteredStops.map(s => {
                 let dist = null;
-                // 修正：確保 lat/long 欄位匹配，且 userPos 只要存在就計算
-                const sLong = s.long || s.lng;
+                // 修正：確保 lat/lng 欄位匹配 (JSON uses 'lng')
+                const sLong = (s.lng !== undefined) ? s.lng : s.long;
                 if (userPos && s.lat && sLong) {
                     dist = getDistanceFromLatLonInKm(userPos.lat, userPos.lng, s.lat, sLong);
                 }
@@ -651,6 +849,30 @@
             saveSettings();
         };
 
+        // [Feature] Toggle GPS animation on both Mobile (Dot) and Desktop (Btn)
+        function updateLocatingStatus(isLocating) {
+            const btn = document.getElementById('gps-btn');
+            const mobileDot = document.getElementById('mobile-status-dot');
+            
+            if (isLocating) {
+                if (btn) {
+                    btn.classList.add('animate-spin');
+                    btn.disabled = true;
+                }
+                if (mobileDot) {
+                    mobileDot.classList.add('locating-spinner');
+                }
+            } else {
+                if (btn) {
+                    btn.classList.remove('animate-spin');
+                    btn.disabled = false;
+                }
+                if (mobileDot) {
+                    mobileDot.classList.remove('locating-spinner');
+                }
+            }
+        }
+
         // [Feature] Dual-stage Positioning: Fast then Accurate
         window.findNearestStop = (silent = false) => {
             if (db.stops.length === 0) return;
@@ -659,9 +881,8 @@
                 return;
             }
 
-            const btn = document.getElementById('gps-btn');
-            btn.classList.add('animate-spin');
-            btn.disabled = true;
+            // Start Animation
+            updateLocatingStatus(true);
 
             let isFinal = false; // 標記是否已獲得高精度結果
 
@@ -703,30 +924,32 @@
                     if (isHighRes && navigator.vibrate) navigator.vibrate(50);
                 }
 
-                if (isHighRes || isFinal) {
-                    btn.classList.remove('animate-spin');
-                    btn.disabled = false;
+                // 如果這是高精度結果，則結束動畫
+                if (isHighRes) {
+                    isFinal = true;
+                    updateLocatingStatus(false);
                 }
             };
 
             // 第一階段：快速定位 (低精度, 3秒超時)
             navigator.geolocation.getCurrentPosition(
-                (pos) => handleCoords(pos, false),
-                null,
-                { enableHighAccuracy: false, timeout: 3000 }
+                (pos) => { if (!isFinal) handleCoords(pos, false); },
+                e => console.log('Low res GPS fail', e),
+                { timeout: 3000, maximumAge: 60000, enableHighAccuracy: false }
             );
 
             // 第二階段：精確定位 (高精度, 15秒超時)
             navigator.geolocation.getCurrentPosition(
                 (pos) => handleCoords(pos, true),
                 (err) => {
-                    if (!isFinal) { // 如果連低精度都沒拿到才報錯
-                        if (!silent) alert(lang === 'zh' ? "定位失敗" : "Location failed");
-                        btn.classList.remove('animate-spin');
-                        btn.disabled = false;
+                    console.warn('High res GPS fail', err);
+                    // 只有在完全失敗且沒有低精度結果時才報錯
+                    if (!isFinal) {
+                        if (!silent) alert(lang === 'zh' ? "無法獲取精確位置" : "GPS Error");
+                        updateLocatingStatus(false);
                     }
                 },
-                { enableHighAccuracy: true, timeout: 15000 }
+                { timeout: 10000, maximumAge: 0, enableHighAccuracy: true }
             );
         };
 
@@ -736,47 +959,88 @@
         function formatTime(t) { return t.split(':').slice(0, 2).join(':'); }
 
         function renderTimeline(bus) {
-            if (!db.route_times) return '';
-            const steps = db.route_times.filter(t => t.route_id === bus.route_id);
+            if (!db.segments || db.segments.length === 0) return '';
+
+            // 使用 segments 代替 routetimes
+            const steps = db.segments.filter(t => t.route_id === bus.route_id);
             let baseSec = -1;
+
             const asToStop = steps.find(s => s.to_stop_id === bus.stop_id);
-            if (asToStop) baseSec = asToStop.expected_duration_sec;
-            else if (steps.some(s => s.from_stop_id === bus.stop_id)) baseSec = 0;
-            if (baseSec === -1) return `<div class="mt-2 py-2 text-[10px] text-slate-400 italic text-center border-t border-slate-100 dark:border-slate-800">${i18n[lang].term}</div>`;
+            if (asToStop) {
+                baseSec = asToStop.expected_duration_sec;
+            } else if (steps.some(s => s.from_stop_id === bus.stop_id)) {
+                baseSec = 0;
+            }
+
+            if (baseSec === -1) {
+                return `<div class="mt-2 py-2 text-[10px] text-slate-400 italic text-center border-t border-slate-100 dark:border-slate-800">${i18n[lang].term}</div>`;
+            }
+
             const nextSteps = steps.filter(s => s.expected_duration_sec > baseSec).sort((a, b) => a.expected_duration_sec - b.expected_duration_sec);
-            
-            return `
-                <div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
-                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">${i18n[lang].next}</p>
-                    <div class="space-y-1 px-1">
-                        ${nextSteps.map(step => {
-                            const baseDate = getNow();
-                            const [h, m, s] = bus.arrival_time.split(':').map(Number);
-                            const arrivalDate = new Date(baseDate.setHours(h, m, s || 0, 0));
-                            arrivalDate.setSeconds(arrivalDate.getSeconds() + (step.expected_duration_sec - baseSec));
-                            const est = arrivalDate.toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit', hour12: false });
-                            const sObj = db.stops.find(x => x.id === step.to_stop_id);
-                            return `
-                            <div class="flex justify-between items-center group">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 group-hover:bg-indigo-400 transition-colors"></div>
-                                    <span class="text-[11px] font-medium text-slate-600 dark:text-slate-400">${sObj ? (lang === 'zh' ? sObj.name_zh : sObj.name_en) : step.to_stop_id}</span>
-                                </div>
-                                <span class="text-[10px] font-mono font-bold text-slate-400 group-hover:text-indigo-500">${est}</span>
-                            </div>`;
-                        }).join('')}
-                    </div>
+
+            // [Fix] Terminus Handling
+            if (nextSteps.length === 0) {
+                return `<div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">${i18n[lang].term}</p>
+                    <div class="px-1 py-1 text-[11px] font-medium text-slate-500 italic">${lang === 'zh' ? '此為路線終點站' : 'Terminus of this route'}</div>
                 </div>`;
+            }
+
+            return `<div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">${i18n[lang].next}</p>
+                <div class="space-y-1 px-1">
+                    ${nextSteps.map(step => {
+                        const baseDate = getNow();
+                        // [Fix] Handle time parsing safely (s is undefined for HH:MM format)
+                        const [h, m] = bus.arrival_time.split(':').map(Number);
+                        const arrivalDate = new Date(baseDate);
+                        arrivalDate.setHours(h, m, 0, 0); // Reset seconds/ms to 0 for calculation base
+                        
+                        // Add relative duration difference
+                        arrivalDate.setSeconds(arrivalDate.getSeconds() + (step.expected_duration_sec - baseSec));
+
+                        const est = arrivalDate.toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit', hour12: false });
+                        const sObj = db.stops.find(x => x.id === step.to_stop_id);
+
+                        return `<div class="flex justify-between items-center group">
+                            <div class="flex items-center gap-2">
+                                <div class="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 group-hover:bg-indigo-400 transition-colors"></div>
+                                <span class="text-[11px] font-medium text-slate-600 dark:text-slate-400">${sObj ? (lang === 'zh' ? sObj.name_zh : sObj.name_en) : step.to_stop_id}</span>
+                            </div>
+                            <span class="text-[10px] font-mono font-bold text-slate-400 group-hover:text-indigo-500">${est}</span>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>`;
         }
 
         function processAndRender() {
             const listDiv = document.getElementById('bus-list');
+            // [Fix] Robust check
+            if (!currentStopId || db.stops.length === 0) {
+                console.warn('Skipping render: No stop selected or data empty');
+                return;
+            }
+            
+            // [Debug] Check if we have arrivals
+            const relevantArrivals = db.arrivals.filter(a => a.stop_id === currentStopId);
+            if (relevantArrivals.length === 0 && db.arrivals.length > 0) {
+                console.log(`No arrivals for stop ${currentStopId} (Total: ${db.arrivals.length})`);
+            }
+
             const now = getNow();
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
             const filtered = db.arrivals.filter(arr => {
                 if (arr.stop_id !== currentStopId) return false;
                 const dt = arr.day_type || "";
-                let isMatch = (currentMode === 'weekday') ? (dt.includes('MON') || dt === 'N' || dt === "") : (dt.includes('SUN') || dt.includes('HOLIDAY') || dt === 'N');
+                let isMatch = false;
+                if (currentMode === 'weekday') {
+                    isMatch = dt.includes('MON') || dt === 'N' || dt === '';
+                } else if (currentMode === 'nonteaching') {
+                    isMatch = dt.includes('MON') && !dt.includes('TEACHING');
+                } else if (currentMode === 'sunday') {
+                    isMatch = dt.includes('SUN') || dt.includes('HOLIDAY') || dt === 'N';
+                }
                 if (!isMatch) return false;
                 // [Fix A] Use helper
                 arr.diff = calcDiffMinutes(arr.arrival_time, currentMinutes);
@@ -842,6 +1106,7 @@
             const currentDay = now.getDay();
             if (currentDay !== lastCheckedDay) {
                 lastCheckedDay = currentDay;
+                // [Stage 2] Support nonteaching mode
                 const newMode = (currentDay === 0) ? 'sunday' : 'weekday';
                 if (currentMode !== newMode) {
                     currentMode = newMode;
@@ -874,9 +1139,30 @@
             document.getElementById('modal-route-icon').innerText = routeDisp;
             document.getElementById('modal-route-name').innerText = lang === 'zh' ? route.name_zh : route.name_en;
             document.getElementById('modal-route-category').innerText = lang === 'zh' ? route.category_zh : route.category_en;
-            document.getElementById('modal-route-time').innerText = route.open_close_time_UI || '--';
-            document.getElementById('modal-route-freq').innerText = route.departure_time_UI || '--';
-            document.getElementById('modal-route-days').innerText = route.open_weekdays_UI || '--';
+            
+            // 格式化時間顯示
+            const openTime = (route.open_time || '00:00').substring(0, 5);
+            const closeTime = (route.close_time || '23:59').substring(0, 5);
+            document.getElementById('modal-route-time').innerText = `${openTime} - ${closeTime}`;
+            
+            // 格式化班次顯示 (Safe Parse)
+            let depMins = route.departure_mins_json;
+            if (typeof depMins === 'string') {
+                try { depMins = JSON.parse(depMins); } catch(e) { depMins = []; }
+            }
+            if (!Array.isArray(depMins)) depMins = [];
+            
+            const freqText = depMins.length > 0 ? (depMins.join(', ') + ' min') : 'Check Schedule';
+            document.getElementById('modal-route-freq').innerText = freqText;
+            
+            // 格式化營運日顯示
+            const dayTypeMap = {
+                'MON_TO_SAT': lang === 'zh' ? '星期一至六' : 'Mon-Sat',
+                'MON_TO_SAT_TEACHING_ONLY': lang === 'zh' ? '星期一至六（教學日）' : 'Mon-Sat (Teaching Only)',
+                'MON_TO_FRI_TEACHING_ONLY': lang === 'zh' ? '星期一至五（教學日）' : 'Mon-Fri (Teaching Only)',
+                'SUN_AND_PUBLIC_HOLIDAY': lang === 'zh' ? '星期日及公眾假期' : 'Sun & Public Holidays'
+            };
+            document.getElementById('modal-route-days').innerText = dayTypeMap[route.operating_day_type] || route.operating_day_type;
             
             const remarks = lang === 'zh' ? route.remarks_zh : route.remarks_en;
             const remarksContainer = document.getElementById('modal-remarks-container');

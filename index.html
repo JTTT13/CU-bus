@@ -43,6 +43,30 @@
         if (isDark) document.documentElement.classList.add('dark');
     </script>
     <style>
+        /* [New] Timeline Apple Style Enhancements */
+        .timeline-line {
+            position: absolute;
+            left: 15px; /* Center of the dot (w-8/2 - line/2) */
+            top: 28px;  /* Start below the first dot center */
+            bottom: 0;
+            width: 2px;
+            background: #E5E5EA; /* Apple System Gray 5 */
+            z-index: 0;
+        }
+        .dark .timeline-line { background: #38383A; }
+        
+        .timeline-node-container:last-child .timeline-line { display: none; }
+        
+        /* Pulse for Current Stop */
+        @keyframes apple-pulse-blue {
+            0% { box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(0, 122, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); }
+        }
+        .current-stop-pulse {
+            animation: apple-pulse-blue 2s infinite;
+        }
+
         body { -webkit-tap-highlight-color: transparent; font-feature-settings: "cv02", "cv03", "cv04", "cv11"; }
         #modal-route-icon { font-size: clamp(1.2rem, 5vw, 1.5rem); }
         .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
@@ -66,27 +90,28 @@
         nav.sticky { z-index: 100; }
         #settings-modal { z-index: 110; }
 
-        /* [Route Modal] 修正：基礎狀態需包含過渡屬性 */
+        /* [Route Modal] Apple-grade blur & animation */
         #route-modal {
             opacity: 0;
             visibility: hidden;
-            transition: opacity 0.4s ease, visibility 0.4s;
+            transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                        visibility 0.35s;
         }
         #route-modal.visible {
             opacity: 1;
             visibility: visible;
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            backdrop-filter: blur(24px) saturate(200%);
+            -webkit-backdrop-filter: blur(24px) saturate(200%);
         }
 
         /* [Fix] 防止背景滾動 */
         body.modal-open { overflow: hidden; }
 
-        /* [Drawer Styles] */
+        /* [Drawer Styles] Enhanced spring animation */
         #route-modal-card {
-            /* 這裡的動畫時間與曲線必須與 Stop List 一致 (0.5s) */
-            transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
-            will-change: transform;
+            transition: transform 0.45s cubic-bezier(0.28, 0.84, 0.42, 1),
+                        opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform, opacity;
         }
         
         @media (max-width: 767px) {
@@ -94,47 +119,99 @@
                 position: fixed;
                 bottom: 0; left: 0; right: 0;
                 width: 100%;
-                /* [Modified] Auto height to fit content */
                 height: auto;
-                max-height: calc(100dvh - 80px); /* 64px navbar + 16px safe gap */
-                /* 更圓潤的 Apple Style 圓角 */
-                border-radius: 24px 24px 0 0;
+                max-height: calc(100dvh - 64px); /* Optimized for navbar */
+                border-radius: 28px 28px 0 0; /* Larger radius */
                 transform: translateY(110%);
-                padding-bottom: env(safe-area-inset-bottom);
-                background: #F2F2F7;
+                padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+                background: #F5F5F7; /* Lighter for depth */
+                box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.12);
             }
-            .dark #route-modal-card { background: #1C1C1E; }
-            #route-modal.visible #route-modal-card { transform: translateY(0); }
+            .dark #route-modal-card {
+                background: #1C1C1E;
+                box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.4);
+            }
+            #route-modal.visible #route-modal-card {
+                transform: translateY(0);
+                opacity: 1;
+            }
             .dragging { transition: none !important; }
         }
 
         @media (min-width: 768px) {
-            /* 桌面版改為垂直置中靠右的懸浮卡片 */
-            #route-modal { justify-content: flex-end; align-items: center; padding: 2rem; top: 0; }
+            #route-modal {
+                justify-content: flex-end;
+                align-items: center;
+                padding: 2.5rem;
+                top: 0;
+            }
             #route-modal-card {
                 height: auto;
-                max-height: calc(100vh - 4rem);
-                width: 400px;
-                border-radius: 32px;
-                transform: translateX(120%); /* 初始隱藏在右側 */
-                box-shadow: -20px 0 80px rgba(0,0,0,0.15);
+                max-height: calc(100vh - 5rem);
+                width: 420px; /* Slightly wider */
+                border-radius: 24px; /* Consistent with iOS */
+                transform: translateX(110%) scale(0.96);
+                opacity: 0;
+                box-shadow: -16px 0 64px rgba(0, 0, 0, 0.18),
+                            0 8px 32px rgba(0, 0, 0, 0.08);
             }
-            #route-modal.visible #route-modal-card { transform: translateX(0); }
+            .dark #route-modal-card {
+                box-shadow: -16px 0 64px rgba(0, 0, 0, 0.5),
+                            0 8px 32px rgba(0, 0, 0, 0.3);
+            }
+            #route-modal.visible #route-modal-card {
+                transform: translateX(0) scale(1);
+                opacity: 1;
+            }
         }
 
-        /* 1. 確保 pill 高度自適應並優化排版 */
+        /* 1. Apple-style Info Pill with subtle elevation */
         .info-pill {
-            @apply bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.05] rounded-2xl p-4 flex flex-col gap-1;
+            @apply bg-white/60 dark:bg-white/[0.03]
+                   border border-black/[0.08] dark:border-white/[0.08]
+                   rounded-2xl p-4 flex flex-col gap-1.5
+                   shadow-sm hover:shadow-md
+                   transition-all duration-200;
             height: auto;
             min-height: min-content;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
         
-        /* 2. 增加 Modal 內容間距，使其更 user-friendly */
+        .info-pill:active {
+            transform: scale(0.985);
+        }
+        
+        /* 2. Modal 內容區優化間距與滾動體驗 */
         #route-modal-card .overflow-y-auto {
-            padding-top: 1rem;
+            padding-top: 0.75rem;
+            padding-bottom: 1.5rem;
             display: flex;
             flex-direction: column;
-            gap: 12px; /* Apple Style 典型的元素間距 */
+            gap: 10px; /* Tighter spacing for professionalism */
+            overscroll-behavior: contain;
+        }
+        
+        /* 3. Section Headers (Apple System Typography) */
+        .pill-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: rgba(60, 60, 67, 0.6); /* iOS System Gray */
+        }
+        .dark .pill-label {
+            color: rgba(235, 235, 245, 0.6);
+        }
+        
+        .pill-value {
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.4;
+            color: rgb(28, 28, 30); /* iOS Label */
+        }
+        .dark .pill-value {
+            color: rgb(242, 242, 247);
         }
 
         /* 3. 強化 Grabber 視覺 */
@@ -152,7 +229,49 @@
             to { transform: rotate(360deg); }
         }
         .animate-apple-spin {
-            animation: apple-rotation 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+          animation: apple-rotation 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+  
+        /* Apple-style Timeline Pulse Animation */
+        @keyframes timeline-pulse {
+          0% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.7);
+          }
+          50% {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 4px rgba(0, 122, 255, 0);
+          }
+          100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(0, 122, 255, 0);
+          }
+        }
+        
+        .timeline-pulse {
+          animation: timeline-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+  
+        /* Smooth Scroll Behavior for Timeline */
+        .timeline-scroll-container {
+          scroll-behavior: smooth;
+          -webkit-overflow-scrolling: touch;
+        }
+        
+        /* Hide scrollbar but keep functionality */
+        .timeline-scroll-container::-webkit-scrollbar {
+          width: 0px;
+          background: transparent;
+        }
+  
+        /* Timeline Pulse Animation */
+        @keyframes pulse-ring {
+          0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.7); }
+          70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(0, 122, 255, 0); }
+          100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); }
+        }
+        .timeline-pulse {
+          animation: pulse-ring 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
         }
         
         /* [Feature] Mobile Locating Spinner */
@@ -182,6 +301,40 @@
                         opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             will-change: transform, opacity;
         }
+
+        /* [New] Timeline Gradient Mask for smooth fade out */
+        .timeline-mask {
+            mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+        }
+
+        /* Apple Maps Style Location Puck */
+        .apple-puck {
+            width: 14px;
+            height: 14px;
+            background-color: #007AFF;
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.2);
+            z-index: 20;
+            position: relative;
+        }
+        .dark .apple-puck {
+            border-color: #1C1C1E; /* Match dark card bg */
+            box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.25);
+        }
+        
+        /* Continuous Line Fix */
+        .timeline-spine {
+          position: absolute;
+          left:27px; /* 20px (px-5 padding) + 7px (center of w-14px container) = 27px */
+          top: 0;
+          bottom: 0;
+          width: 2px;
+          background-color: #E5E5EA;
+          z-index: 0;
+        }
+        .dark .timeline-spine { background-color: #38383A; }
     </style>
 </head>
 <body class="bg-apple-gray dark:bg-[#000000] text-slate-900 dark:text-slate-100 min-h-screen font-sans antialiased tracking-tight">
@@ -462,50 +615,106 @@
         <!-- Modal Card -->
         <div id="route-modal-card" class="relative bg-[#F2F2F7]/95 dark:bg-[#1C1C1E]/95 backdrop-blur-2xl shadow-2xl overflow-hidden flex flex-col border border-white/20 dark:border-white/5">
             
-            <!-- Drag Handle (Mobile) / Top Bar -->
-            <div class="h-10 w-full flex items-center justify-center md:hidden shrink-0" onclick="closeRouteModal()">
-                <div class="w-10 h-1.5 bg-black/10 dark:bg-white/10 rounded-full"></div>
+            <!-- Drag Handle (Mobile): Apple-style grabber -->
+            <div class="h-8 w-full flex items-center justify-center md:hidden shrink-0 cursor-grab active:cursor-grabbing"
+                 onclick="closeRouteModal()">
+                <div class="w-9 h-1.5 bg-black/[0.15] dark:bg-white/[0.2] rounded-full
+                            transition-all duration-200 active:scale-x-75"></div>
             </div>
 
-            <!-- Header Section -->
-            <div class="px-8 pt-6 pb-5 shrink-0">
-                <div class="flex items-start justify-between">
-                    <div class="flex gap-5 items-center">
-                        <div id="modal-route-icon" class="w-16 h-16 bg-black dark:bg-white rounded-2xl flex items-center justify-center text-white dark:text-black font-black text-2xl shadow-xl"></div>
-                        <div>
-                            <h3 id="modal-route-name" class="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white"></h3>
-                            <!-- [Stage 1] Enhanced container for badges -->
-                            <div class="flex items-center gap-2 mt-1.5 flex-wrap">
-                                <span id="modal-route-category" class="text-[10px] font-bold px-2 py-0.5 bg-apple-accent text-white rounded-md tracking-wider uppercase shadow-sm"></span>
+            <!-- Header Section: Apple-grade hierarchy -->
+            <div class="px-6 md:px-8 pt-5 md:pt-6 pb-4 md:pb-5 shrink-0 border-b border-black/[0.06] dark:border-white/[0.06]">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex gap-4 items-start flex-1 min-w-0">
+                        <!-- Route Icon with subtle animation -->
+                        <div id="modal-route-icon"
+                             class="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-black to-gray-800 dark:from-white dark:to-gray-200
+                                    rounded-[18px] flex items-center justify-center
+                                    text-white dark:text-black font-black text-xl md:text-2xl
+                                    shadow-lg hover:shadow-xl hover:scale-105
+                                    transition-all duration-300 shrink-0"></div>
+                        
+                        <div class="flex-1 min-w-0 pt-0.5">
+                            <!-- Route Name with better typography -->
+                            <h3 id="modal-route-name"
+                                class="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white
+                                       leading-tight mb-2 truncate"></h3>
+                            
+                            <!-- Metadata Row: Category + Badges -->
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span id="modal-route-category"
+                                      class="inline-flex items-center text-[10px] font-bold px-2.5 py-1
+                                             bg-blue-500 text-white rounded-lg tracking-wide uppercase
+                                             shadow-sm ring-1 ring-blue-600/20"></span>
                                 <!-- Badges injected here via JS -->
                             </div>
                         </div>
                     </div>
-                    <button onclick="closeRouteModal()" class="hidden md:flex w-10 h-10 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 rounded-full items-center justify-center transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    
+                    <!-- Close Button (Desktop) -->
+                    <button onclick="closeRouteModal()"
+                            class="hidden md:flex w-9 h-9 bg-black/[0.06] dark:bg-white/[0.08]
+                                   hover:bg-black/[0.12] dark:hover:bg-white/[0.15]
+                                   rounded-full items-center justify-center
+                                   transition-all duration-200 active:scale-90 shrink-0"
+                            aria-label="Close">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5 text-slate-700 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                     </button>
                 </div>
             </div>
 
-            <!-- Scrollable Body -->
-            <div class="flex-1 overflow-y-auto custom-scrollbar px-8 pb-10 space-y-3">
-                <div class="info-pill">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Service Hours</span>
-                    <span id="modal-route-time" class="text-base font-semibold text-slate-900 dark:text-white"></span>
+            <!-- Scrollable Body: Enhanced readability -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar px-6 md:px-8 pb-8 md:pb-10 pt-5">
+                
+                <!-- Service Hours Card -->
+                <div class="info-pill group">
+                    <div class="flex items-center gap-2 mb-1">
+                        <svg class="w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span class="pill-label" data-i18n="serviceHours">Service Hours</span>
+                    </div>
+                    <span id="modal-route-time" class="pill-value font-mono"></span>
                 </div>
 
-                <div class="info-pill">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Schedule Info</span>
-                    <span id="modal-route-freq" class="text-base font-semibold text-slate-900 dark:text-white leading-snug"></span>
+                <!-- Schedule Info Card -->
+                <div class="info-pill group">
+                    <div class="flex items-center gap-2 mb-1">
+                        <svg class="w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <span class="pill-label" data-i18n="scheduleInfo">Schedule Info</span>
+                    </div>
+                    <span id="modal-route-freq" class="pill-value leading-relaxed"></span>
                 </div>
 
-                <div class="info-pill">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Operating Days</span>
-                    <span id="modal-route-days" class="text-sm font-medium text-slate-600 dark:text-slate-300"></span>
+                <!-- Operating Days Card -->
+                <div class="info-pill group">
+                    <div class="flex items-center gap-2 mb-1">
+                        <svg class="w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span class="pill-label" data-i18n="operatingDays">Operating Days</span>
+                    </div>
+                    <span id="modal-route-days" class="pill-value text-sm"></span>
                 </div>
 
-                <div id="modal-remarks-container" class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-700/30 hidden">
-                    <p id="modal-remarks" class="text-xs text-amber-700 dark:text-amber-400 leading-relaxed font-medium italic"></p>
+                <!-- Remarks (Warning Style) -->
+                <div id="modal-remarks-container"
+                     class="mt-1 p-4 rounded-2xl
+                            bg-gradient-to-br from-amber-50 to-orange-50
+                            dark:from-amber-900/10 dark:to-orange-900/10
+                            border border-amber-200/60 dark:border-amber-700/40
+                            shadow-sm hidden
+                            animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div class="flex gap-3">
+                        <svg class="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <p id="modal-remarks" class="text-xs text-amber-800 dark:text-amber-300 leading-relaxed font-medium"></p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -665,7 +874,7 @@
             }
         };
         let mockTime = urlParams.get('time');
-
+        
         let isStopListOpen = false, expandedTripId = null;
         let isFirstLoad = true;
         let fetchController = null;
@@ -673,6 +882,7 @@
         let userPos = null; // [Stage 2] Store GPS
         let refreshTimer = 0; // [Stage 3] Countdown
         const REFRESH_INTERVAL = 30;
+        let activeRouteId = null; // Track currently opened route modal
 
         // [Fix C] Haversine Formula for accurate distance
         function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
@@ -702,10 +912,16 @@
 
         const i18n = {
             zh: {
+                serviceHours: "服務時間",
+                scheduleInfo: "班次資料",
+                operatingDays: "行駛日子",
                 weekday: '教學日', nonteaching: '非教學日', sunday: '假日/週日', arrival: '實時到站', empty: '當前時段無班次', arrived: '已抵達', soon: '即將', unit: '分', search: '搜尋車站...', next: '後續車站 (預計)', term: '終點站',
                 settings: '設定', appearance: '外觀', theme: '深色模式', lang: '語言', behavior: '行為', autoSwitch: '自動切換車站', autoSwitchDesc: '定位後自動跳轉', advanced: '進階', devMode: '開發模式', devModeDesc: '啟用時間模擬與測試工具', simulation: '模擬中', resetRealTime: '重置為實時', timeHint: '點擊時間或日期即可模擬該時段班次'
             },
             en: {
+                serviceHours: "Service Hours",
+                scheduleInfo: "Schedule Info",
+                operatingDays: "Operating Days",
                 weekday: 'Teaching', nonteaching: 'Non-Teaching', sunday: 'Sun/Holiday', arrival: 'Real-time Arrivals', empty: 'No service at this time', arrived: 'Arrived', soon: 'Soon', unit: 'min', search: 'Search stops...', next: 'Trip Timeline', term: 'Terminus',
                 settings: 'Settings', appearance: 'Appearance', theme: 'Dark Mode', lang: 'Language', behavior: 'Behavior', autoSwitch: 'Auto Switch Stop', autoSwitchDesc: 'Jump to stop after locating', advanced: 'Advanced', devMode: 'Dev Mode', devModeDesc: 'Enable time simulation tools', simulation: 'Simulating', resetRealTime: 'Reset to Live', timeHint: 'Tap time or day to simulate schedule'
             }
@@ -858,6 +1074,16 @@
             }
         };
 
+        // Update all elements with data-i18n attribute
+        window.updateI18n = () => {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[lang] && i18n[lang][key]) {
+                    el.textContent = i18n[lang][key];
+                }
+            });
+        };
+
         window.toggleAutoSwitch = () => {
             autoSwitchStop = !autoSwitchStop;
             saveSettings();
@@ -950,6 +1176,9 @@
             // Initialize theme icon (settings modal only)
             updateThemeIcon();
             
+            // Initialize i18n labels
+            updateI18n();
+            
             // Initialize clock
             updateClock();
             setInterval(updateClock, 1000);
@@ -961,10 +1190,10 @@
             // 統一由 loadData 內部控制定位時機
             loadData();
             
-            // Client-side ticker to update relative times (e.g. "2 min" -> "1 min") without fetching
+            // 🔧 FIX: 禁止全量 re-render，改用輕量級倒數更新
             setInterval(() => {
-                if (db.stops.length > 0) processAndRender();
-            }, 5000);
+                if (db.stops.length > 0) tickCountdownOnly();
+            }, 1000); // 每秒更新倒數，但唔重建 DOM
             
             // [Feature] Bottom Sheet Controller
             initBottomSheet('stop-list-sheet', 'stop-list-handle', () => toggleStopList(false));
@@ -1037,8 +1266,10 @@
                 searchInput.placeholder = i18n[lang].search;
             }
             
+            updateI18n(); // Update all data-i18n labels
             renderAll();
             saveSettings();
+            refreshRouteModalIfOpen(); // Update opened route modal immediately
         }
 
         function updateRefreshUI() {
@@ -1057,6 +1288,7 @@
                     ring.style.strokeDashoffset = offset;
                 }
             } else {
+                // 🔧 FIX: 自動刷新時傳入 true 標記,避免重置展開狀態
                 loadData(true);
             }
         }
@@ -1141,7 +1373,9 @@
                     isFirstLoad = false;
                     renderAll(true);
                 } else {
-                    renderAll(false);
+                    // 🔧 FIX: 避免重新渲染導致 timeline 滾動位置重置
+                    // 僅更新倒數計時,不重建整個 DOM
+                    tickCountdownOnly();
                 }
             } catch (e) {
                 if (e.name !== 'AbortError') {
@@ -1436,64 +1670,187 @@
         };
 
         window.changeMode = (m) => { currentMode = m; expandedTripId = null; renderAll(); saveSettings(); };
-        window.toggleTripDetails = (id) => { expandedTripId = (expandedTripId === id) ? null : id; processAndRender(); };
+
+        // [Refactor] scrollTimelineToCurrentStop removed in favor of native scrollIntoView in toggleTripDetails
+
+        window.toggleTripDetails = (id) => {
+            const wasExpanded = expandedTripId === id;
+            expandedTripId = wasExpanded ? null : id;
+            processAndRender();
+            
+            if (!wasExpanded) {
+                // Use double RAF to ensure layout paint is complete before scrolling
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        // ID Format: timeline-node-{RouteID}-{Time}-{StopID}
+                        // This ID is set on the *Current* node in renderTimeline
+                        const targetEl = document.getElementById(`current-node-${id}`);
+                        
+                        if (targetEl) {
+                            // block: 'center' fits the user request for "盡量置中"
+                            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    });
+                });
+                
+                if (navigator.vibrate) navigator.vibrate(10); // Haptic feedback
+            }
+        };
 
         function formatTime(t) { return t.split(':').slice(0, 2).join(':'); }
 
         function renderTimeline(bus) {
             if (!db.segments || db.segments.length === 0) return '';
 
-            // 使用 segments 代替 routetimes
-            const steps = db.segments.filter(t => t.route_id === bus.route_id);
-            let baseSec = -1;
+            // 1. Logic: Get ordered segments
+            const steps = db.segments
+                .filter(t => t.route_id === bus.route_id)
+                .sort((a, b) => a.expected_duration_sec - b.expected_duration_sec);
+            
+            if (steps.length === 0) return '';
 
-            const asToStop = steps.find(s => s.to_stop_id === bus.stop_id);
-            if (asToStop) {
-                baseSec = asToStop.expected_duration_sec;
-            } else if (steps.some(s => s.from_stop_id === bus.stop_id)) {
-                baseSec = 0;
+            // 2. Logic: Build linear stops
+            let timelineStops = [];
+            const addedSet = new Set();
+            
+            if (steps[0].from_stop_id) {
+                timelineStops.push({ stopId: steps[0].from_stop_id, seconds: 0 });
+                addedSet.add(steps[0].from_stop_id);
             }
+            steps.forEach(s => {
+                if (!addedSet.has(s.to_stop_id)) {
+                    timelineStops.push({ stopId: s.to_stop_id, seconds: s.expected_duration_sec });
+                    addedSet.add(s.to_stop_id);
+                }
+            });
 
-            if (baseSec === -1) {
-                return `<div class="mt-2 py-2 text-[10px] text-slate-400 italic text-center border-t border-slate-100 dark:border-slate-800">${i18n[lang].term}</div>`;
-            }
+            // 3. Logic: Determine Current Index & Time Base
+            const currentIndex = timelineStops.findIndex(s => s.stopId === bus.stop_id);
+            if (currentIndex === -1) return '';
+            
+            const currentStopData = timelineStops[currentIndex];
+            const baseSeconds = currentStopData.seconds;
+            const baseDate = getNow();
+            const [h, m] = bus.arrival_time.split(':').map(Number);
+            const arrivalDate = new Date(baseDate);
+            arrivalDate.setHours(h, m, 0, 0);
 
-            const nextSteps = steps.filter(s => s.expected_duration_sec > baseSec).sort((a, b) => a.expected_duration_sec - b.expected_duration_sec);
+            // 4. Render: Apple Style Visuals
+            const timelineHTML = timelineStops.map((point, index) => {
+                const sObj = db.stops.find(x => x.id === point.stopId);
+                const stopName = sObj ? (lang === 'zh' ? sObj.name_zh : sObj.name_en) : point.stopId;
+                
+                const diffSec = point.seconds - baseSeconds;
+                const pointDate = new Date(arrivalDate.getTime() + diffSec * 1000);
+                const timeStr = pointDate.toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit', hour12: false });
 
-            // [Fix] Terminus Handling
-            if (nextSteps.length === 0) {
-                return `<div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">${i18n[lang].term}</p>
-                    <div class="px-1 py-1 text-[11px] font-medium text-slate-500 italic">${lang === 'zh' ? '此為路線終點站' : 'Terminus of this route'}</div>
-                </div>`;
-            }
+                // States
+                let state = 'future';
+                if (index < currentIndex) state = 'past';
+                else if (index === currentIndex) state = 'current';
 
-            return `<div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
-                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">${i18n[lang].next}</p>
-                <div class="space-y-1 px-1">
-                    ${nextSteps.map(step => {
-                        const baseDate = getNow();
-                        // [Fix] Handle time parsing safely (s is undefined for HH:MM format)
-                        const [h, m] = bus.arrival_time.split(':').map(Number);
-                        const arrivalDate = new Date(baseDate);
-                        arrivalDate.setHours(h, m, 0, 0); // Reset seconds/ms to 0 for calculation base
+                // Visual Configurations
+                let rowClass = "flex items-center gap-4 relative py-3 min-h-[44px]"; // Touch target friendly
+                let dotHTML = "";
+                let textClass = "";
+                let timeClass = "";
+                let uniqueId = "";
+
+                if (state === 'past') {
+                    // Past: Faded, small dot (No strikethrough)
+                    dotHTML = `<div class="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 z-10"></div>`;
+                    textClass = "text-[13px] font-medium text-slate-400 dark:text-slate-500 opacity-60";
+                    timeClass = "text-[11px] font-mono text-slate-300 dark:text-slate-600 opacity-60";
+                } else if (state === 'current') {
+                    // Current: Apple Maps "Puck"
+                    // Route-Stop-Time format to match toggleTripDetails
+                    const tripId = `${bus.route_id}-${bus.stop_id}-${bus.arrival_time}`;
+                    uniqueId = `id="current-node-${tripId}"`;
+                    
+                    dotHTML = `<div class="apple-puck z-10"></div>`;
+                    textClass = "text-[15px] font-bold text-slate-900 dark:text-white";
+                    timeClass = "text-[12px] font-mono font-bold text-apple-accent bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded";
+                } else {
+                    // Future: Hollow ring or white dot with border
+                    dotHTML = `<div class="w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-800 border-[2px] border-slate-300 dark:border-slate-500 z-10"></div>`;
+                    textClass = "text-[13px] font-medium text-slate-700 dark:text-slate-300";
+                    timeClass = "text-[11px] font-mono text-slate-500 dark:text-slate-400";
+                }
+
+                return `
+                    <div class="${rowClass} group" ${uniqueId}>
+                        <!-- Centered Dot Container (Width 14px to match Puck) -->
+                        <div class="w-[14px] flex justify-center shrink-0">
+                            ${dotHTML}
+                        </div>
                         
-                        // Add relative duration difference
-                        arrivalDate.setSeconds(arrivalDate.getSeconds() + (step.expected_duration_sec - baseSec));
+                        <!-- Content -->
+                        <div class="flex-1 flex justify-between items-baseline pr-2">
+                            <span class="${textClass} transition-colors leading-snug">${stopName}</span>
+                            <span class="${timeClass} tabular-nums tracking-tight ml-3">${timeStr}</span>
+                        </div>
+                    </div>`;
+            }).join('');
 
-                        const est = arrivalDate.toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit', hour12: false });
-                        const sObj = db.stops.find(x => x.id === step.to_stop_id);
+            return `
+                <div class="mt-4 relative">
+                    <!-- The Continuous Line (Spine) -->
+                    <!-- Positioned relative to the padding of the container to align with dots -->
+                    <div class="absolute top-0 bottom-0 left-[26px] w-[2px] bg-slate-100 dark:bg-slate-800/50 rounded-full"></div>
+                    
+                    <!-- Scroll Container with Gradient Mask -->
+                    <div class="timeline-scroll-container max-h-[240px] overflow-y-auto px-5 py-2 timeline-mask space-y-0 relative">
+                        <!-- Progress Line (Blue) for past ? No, keep it simple grey for cleanliness -->
+                        ${timelineHTML}
+                    </div>
+                </div>`;
+        }
 
-                        return `<div class="flex justify-between items-center group">
-                            <div class="flex items-center gap-2">
-                                <div class="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 group-hover:bg-indigo-400 transition-colors"></div>
-                                <span class="text-[11px] font-medium text-slate-600 dark:text-slate-400">${sObj ? (lang === 'zh' ? sObj.name_zh : sObj.name_en) : step.to_stop_id}</span>
-                            </div>
-                            <span class="text-[10px] font-mono font-bold text-slate-400 group-hover:text-indigo-500">${est}</span>
-                        </div>`;
-                    }).join('')}
-                </div>
-            </div>`;
+        // 🆕 FIX: 輕量級倒數更新 — 只改文字，唔重建 DOM
+        function tickCountdownOnly() {
+          const now = getNow();
+          const currentMinutes = now.getHours() * 60 + now.getMinutes();
+          
+          // 1️⃣ 更新所有到站卡片嘅倒數 (假設卡片有 data-arrival-time attribute)
+          document.querySelectorAll('[data-arrival-time]').forEach(card => {
+            const arrivalTime = card.getAttribute('data-arrival-time');
+            const diff = calcDiffMinutes(arrivalTime, currentMinutes);
+            
+            // 更新倒數數字 (必須有對應元素)
+            const diffEl = card.querySelector('.countdown-value');
+            const labelEl = card.querySelector('.countdown-label');
+            
+            if (!diffEl || !labelEl) return;
+            
+            // [Fix] Logic Sync: Treat 0 or less as Arrived to match processAndRender
+            if (diff <= 0) {
+              diffEl.textContent = '--';
+              labelEl.textContent = i18n[lang].arrived;
+              card.classList.remove('text-emerald-600', 'text-rose-600');
+              card.classList.add('text-slate-400');
+            } else if (diff <= 5) {
+              diffEl.textContent = diff;
+              labelEl.textContent = i18n[lang].soon;
+              card.classList.remove('text-emerald-600', 'text-slate-400');
+              card.classList.add('text-rose-600');
+            } else {
+              diffEl.textContent = diff;
+              labelEl.textContent = i18n[lang].unit;
+              card.classList.remove('text-rose-600', 'text-slate-400');
+              card.classList.add('text-emerald-600');
+            }
+          });
+          
+          // 2️⃣ 如果過咗 90 分鐘，先至觸發 full render（移除過期巴士）
+          const needsFullRender = Array.from(document.querySelectorAll('[data-arrival-time]')).some(card => {
+            const arrivalTime = card.getAttribute('data-arrival-time');
+            const diff = calcDiffMinutes(arrivalTime, currentMinutes);
+            return diff < -5 || diff > 90; // 超出顯示範圍
+          });
+          
+          if (needsFullRender) {
+            processAndRender(); // 只在必要時重建
+          }
         }
 
         function processAndRender() {
@@ -1529,12 +1886,35 @@
                 return arr.diff >= -1 && arr.diff <= 60;
             }).sort((a, b) => a.diff - b.diff);
 
-            // [Fix Ghost Scroll] Removed renderStopGrid() from here.
-            // It causes the list to rebuild and reset scroll position.
-            // We only update the stop list when searching, changing mode, or fresh data loads.
+            // ✅ FIX CONFIRMED: Ghost Scroll 已移除 renderStopGrid()
+            // 僅在以下情況更新站點列表:
+            //  1. 搜尋輸入 (renderStopGrid via oninput)
+            //  2. 切換模式 (renderAll)
+            //  3. 首次載入 (renderAll with fullRebuild=true)
+            // 🔒 禁止在 processAndRender 內觸發,避免重置滾動位置
 
-            if (filtered.length === 0) { listDiv.innerHTML = `<div class="py-12 text-center text-slate-400 text-xs font-medium border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg">${i18n[lang].empty}</div>`; return; }
+            if (filtered.length === 0) {
+                listDiv.innerHTML = `<div class="py-12 text-center text-slate-400 text-xs font-medium border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg">${i18n[lang].empty}</div>`;
+                return;
+            }
 
+            // [UX Fix] 1. Snapshot: Save Scroll Position before destroying DOM
+            let savedScrollTop = 0;
+            let savedCardScrollTop = 0;
+            
+            if (expandedTripId) {
+                // Save timeline scroll position
+                const activeContainer = listDiv.querySelector('.timeline-scroll-container');
+                if (activeContainer) savedScrollTop = activeContainer.scrollTop;
+                
+                // Also save the parent card's position relative to viewport (if needed)
+                const activeCard = listDiv.querySelector(`[data-arrival-time]`);
+                if (activeCard) {
+                    savedCardScrollTop = activeCard.offsetTop;
+                }
+            }
+
+            // 2. Render: Rebuild HTML
             listDiv.innerHTML = filtered.map(bus => {
                 const routeMatch = bus.route_name.match(/^[0-9A-Z]+/i);
                 const routeDisp = routeMatch ? routeMatch[0] : bus.route_name.split(' ')[0];
@@ -1544,41 +1924,55 @@
                 let statusCls = 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/30';
                 let timeLabel = i18n[lang].unit, displayDiff = bus.diff;
 
-                if (bus.diff <= 0) { 
-                    statusCls = 'text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'; 
-                    timeLabel = i18n[lang].arrived; displayDiff = '--'; 
-                } else if (bus.diff <= 5) { 
+                // [Fix] Logic Sync: <= 0 is Arrived
+                if (bus.diff <= 0) {
+                    statusCls = 'text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700';
+                    timeLabel = i18n[lang].arrived; displayDiff = '--';
+                } else if (bus.diff <= 5) {
                     statusCls = 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-800/30 font-bold'; 
                     timeLabel = i18n[lang].soon;
                 }
 
                 return `
-                <!-- [Fix] Outer card handles expand toggle globally -->
-                <div onclick="toggleTripDetails('${tripId}')" class="apple-card rounded-[24px] px-5 py-5 cursor-pointer active:scale-[0.98] ${isExpanded ? 'ring-2 ring-apple-accent/20 border-apple-accent/30' : ''}">
+                <!-- 🔧 FIX: 加入 data-arrival-time 屬性 -->
+                <div data-arrival-time="${bus.arrival_time}" onclick="toggleTripDetails('${tripId}')" class="apple-card rounded-[24px] px-5 py-5 cursor-pointer active:scale-[0.98] ${isExpanded ? 'ring-2 ring-apple-accent/20 border-apple-accent/30' : ''}">
                     <div class="flex justify-between items-center">
                         <div class="flex items-center gap-4">
-                            <!-- [Fix] Logo has stopPropagation to prevent triggering outer card -->
-                            <div onclick="openRouteDetails('${bus.route_id}', event)" class="w-12 h-12 shrink-0 bg-black dark:bg-white rounded-[14px] flex items-center justify-center text-white dark:text-black font-black text-sm shadow-apple hover:scale-110 active:scale-90 transition-transform z-10 relative group">
+                            <div onclick="openRouteDetails('${bus.route_id}', event)" class="w-12 h-12 shrink-0 bg-black dark:bg-white rounded-[14px] flex items-center justify-center text-white dark:text-black font-black text-sm shadow-apple hover:scale-110 active:scale-90 transition-transform z-10 relative">
                                 ${routeDisp}
-                                <!-- Optional: Tiny indicator to hint clickability -->
-                                <div class="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-500 rounded-full text-white flex items-center justify-center border-2 border-white dark:border-black opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <svg class="w-2 h-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                </div>
                             </div>
-                            
                             <div class="flex flex-col">
                                 <span class="text-[19px] font-extrabold tracking-tight text-slate-900 dark:text-white leading-none">${formatTime(bus.arrival_time)}</span>
-                                <!-- Route name removed for cleaner Apple-style UI -->
                             </div>
                         </div>
+                        <!-- 🔧 FIX: 倒數區加 class，方便 tickCountdownOnly 更新 -->
                         <div class="px-4 py-2 rounded-[16px] ${statusCls.replace('border-indigo-100', 'border-transparent')} text-center min-w-[70px]">
-                            <div class="text-lg font-black leading-none">${displayDiff}</div>
-                            <div class="text-[9px] font-bold uppercase mt-1 opacity-70">${timeLabel}</div>
+                            <div class="countdown-value text-lg font-black leading-none">${displayDiff}</div>
+                            <div class="countdown-label text-[9px] font-bold uppercase mt-1 opacity-70">${timeLabel}</div>
                         </div>
                     </div>
                     ${isExpanded ? `<div class="mt-4 px-1 animate-in fade-in slide-in-from-top-2 duration-300">${renderTimeline(bus)}</div>` : ''}
                 </div>`;
             }).join('');
+
+            // [UX Fix] 3. Restore: Apply saved scroll position to new DOM
+            if (expandedTripId && savedScrollTop > 0) {
+                // Use requestAnimationFrame to ensure DOM is fully painted
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        const newContainer = listDiv.querySelector('.timeline-scroll-container');
+                        if (newContainer) {
+                            newContainer.scrollTop = savedScrollTop;
+                            // Ensure smooth scroll behavior is disabled during restore
+                            newContainer.style.scrollBehavior = 'auto';
+                            // Re-enable smooth scroll after restore
+                            setTimeout(() => {
+                                newContainer.style.scrollBehavior = 'smooth';
+                            }, 50);
+                        }
+                    });
+                });
+            }
         }
 
         function updateClock() {
@@ -1621,17 +2015,11 @@
             return badges.join('');
         };
 
-        // [Feature] Route Details Modal Logic
-        window.openRouteDetails = (routeId, event) => {
-            if (event) { event.stopPropagation(); event.preventDefault(); }
-            
+        // Populate route modal content (extracted for reuse on lang switch)
+        function populateRouteModal(routeId) {
             const route = db.routes.find(r => r.id === routeId);
             if (!route) return;
 
-            if (navigator.vibrate) navigator.vibrate(8);
-
-            const modal = document.getElementById('route-modal');
-            
             // 同步卡片邏輯：提取短路由名稱 (例如 "1A")
             const routeMatch = routeId.match(/^[0-9A-Z]+/i);
             const routeDisp = routeMatch ? routeMatch[0] : routeId.split(' ')[0];
@@ -1671,7 +2059,17 @@
             }
             if (!Array.isArray(depMins)) depMins = [];
             
-            const freqText = depMins.length > 0 ? (depMins.join(', ') + ' min') : 'Check Schedule';
+            // 格式:「每小時 00, 15, 30 分開出」(補零)
+            let freqText = (lang === "zh" ? "請查閱時間表" : "Check Schedule");
+
+            if (depMins.length > 0) {
+                // 將數字轉為字串並補零 (0 -> 00, 5 -> 05)
+                const formattedMins = depMins.map(m => m.toString().padStart(2, '0')).join(', ');
+                freqText = lang === "zh"
+                    ? `每小時 ${formattedMins} 分開出`
+                    : `Departs at ${formattedMins} past hour`;
+            }
+            
             document.getElementById('modal-route-freq').innerText = freqText;
             
             // 格式化營運日顯示
@@ -1691,6 +2089,23 @@
             } else {
                 remarksContainer.classList.add('hidden');
             }
+        }
+
+        // [Feature] Route Details Modal Logic - Apple-grade UX
+        window.openRouteDetails = (routeId, event) => {
+            if (event) { event.stopPropagation(); event.preventDefault(); }
+            
+            const route = db.routes.find(r => r.id === routeId);
+            if (!route) return;
+
+            // Haptic feedback (iOS-like)
+            if (navigator.vibrate) navigator.vibrate([5, 3]);
+
+            activeRouteId = routeId; // Track opened route
+            populateRouteModal(routeId);
+
+            const modal = document.getElementById('route-modal');
+            const card = document.getElementById('route-modal-card');
 
             // Show Animation
             modal.classList.remove('hidden');
@@ -1702,18 +2117,27 @@
 
         window.closeRouteModal = () => {
             const modal = document.getElementById('route-modal');
-            // 1. 移除 visible class，這會觸發 CSS 中的 transform 向上/向右滑出動畫
+            const card = document.getElementById('route-modal-card');
+            
+            // Fade out animation
             modal.classList.remove('visible');
             document.body.classList.remove('modal-open');
-            
-            // 2. 等待動畫結束 (500ms) 再隱藏容器
+            activeRouteId = null; // Clear tracked route
+
+            // Wait for animation before hiding
             setTimeout(() => {
-                // 再次檢查以免在延遲期間用戶又點開了
-                if (!modal.classList.contains('visible')) {
-                    modal.classList.add('hidden');
-                }
-            }, 500);
+                modal.classList.add('hidden');
+            }, 350); // Match CSS transition duration
+            
+            if (navigator.vibrate) navigator.vibrate(3);
         };
+
+        // Refresh route modal content if it's currently open (for lang switch)
+        function refreshRouteModalIfOpen() {
+            if (activeRouteId) {
+                populateRouteModal(activeRouteId);
+            }
+        }
 
         function initBottomSheet(sheetId, handleId, closeFn) {
             const sheet = document.getElementById(sheetId);

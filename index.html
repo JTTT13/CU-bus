@@ -176,9 +176,12 @@
         <div class="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <div class="w-9 h-9 bg-black dark:bg-white rounded-[10px] flex items-center justify-center text-white dark:text-black font-[900] text-lg tracking-tighter shadow-apple">CU</div>
-                <div class="flex flex-col">
-                    <span class="text-[16px] font-extrabold tracking-tight leading-tight">BUS</span>
-                    <span id="current-time" class="text-[10px] font-bold text-slate-400 leading-none mt-0.5 font-mono">00:00:00</span>
+                <div class="flex flex-col justify-center h-9">
+                    <span class="text-[14px] font-extrabold tracking-tight leading-none text-slate-900 dark:text-white">BUS</span>
+                    <div class="flex flex-col leading-none mt-0.5">
+                        <span id="current-date" class="text-[9px] font-bold text-slate-500 uppercase tracking-wider">---</span>
+                        <span id="current-time" class="text-[9px] font-bold text-slate-400 font-mono mt-[1px]">00:00:00</span>
+                    </div>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -455,8 +458,10 @@
                         <div id="modal-route-icon" class="w-16 h-16 bg-black dark:bg-white rounded-2xl flex items-center justify-center text-white dark:text-black font-black text-2xl shadow-xl"></div>
                         <div>
                             <h3 id="modal-route-name" class="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white"></h3>
-                            <div class="flex gap-2 mt-1">
-                                <span id="modal-route-category" class="text-[10px] font-bold px-2 py-0.5 bg-apple-accent text-white rounded-md tracking-wider uppercase"></span>
+                            <!-- [Stage 1] Enhanced container for badges -->
+                            <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+                                <span id="modal-route-category" class="text-[10px] font-bold px-2 py-0.5 bg-apple-accent text-white rounded-md tracking-wider uppercase shadow-sm"></span>
+                                <!-- Badges injected here via JS -->
                             </div>
                         </div>
                     </div>
@@ -1549,9 +1554,28 @@
                 }
             }
 
+            // Update Time
             const timeStr = now.toLocaleTimeString('zh-HK', { hour12: false });
             document.getElementById('current-time').innerHTML = mockTime ? `<span class="text-rose-500 font-bold">MOCK: ${timeStr}</span>` : timeStr;
+            
+            // [Stage 1] Update Date (e.g. SUN 15 FEB)
+            const dateStr = now.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
+            document.getElementById('current-date').innerText = dateStr;
         }
+
+        // [Stage 1] Helper to generate Apple-style badges
+        const getServiceBadges = (route) => {
+            const badges = [];
+            // N = has_standing_bus (Normal/Standing) -> Blue/Standard
+            if (route.has_standing_bus === 1) {
+                badges.push(`<span class="text-[10px] font-bold px-1.5 py-0.5 bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300 rounded-[6px] border border-blue-200/50 dark:border-blue-500/30 align-middle tracking-tight shadow-sm">N</span>`);
+            }
+            // NS = has_not_standing_bus (No Standing) -> Orange/Warning
+            if (route.has_not_standing_bus === 1) {
+                badges.push(`<span class="text-[10px] font-bold px-1.5 py-0.5 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300 rounded-[6px] border border-orange-200/50 dark:border-orange-500/30 align-middle tracking-tight shadow-sm">NS</span>`);
+            }
+            return badges.join('');
+        };
 
         // [Feature] Route Details Modal Logic
         window.openRouteDetails = (routeId, event) => {
@@ -1571,7 +1595,25 @@
             // Populate Data
             document.getElementById('modal-route-icon').innerText = routeDisp;
             document.getElementById('modal-route-name').innerText = lang === 'zh' ? route.name_zh : route.name_en;
-            document.getElementById('modal-route-category').innerText = lang === 'zh' ? route.category_zh : route.category_en;
+            
+            // [Stage 1] Inject Category & Badges
+            const categoryEl = document.getElementById('modal-route-category');
+            categoryEl.innerText = lang === 'zh' ? route.category_zh : route.category_en;
+            
+            // Badge Injection Logic: Clean up siblings (badges) but keep the category span
+            const parentDiv = categoryEl.parentElement;
+            // Remove all elements except the first one (category span)
+            while (parentDiv.children.length > 1) {
+                parentDiv.removeChild(parentDiv.lastChild);
+            }
+            
+            const badgesHtml = getServiceBadges(route);
+            if (badgesHtml) {
+                const badgeContainer = document.createElement('div');
+                badgeContainer.className = 'flex gap-1.5 items-center ml-1'; // Inner gap
+                badgeContainer.innerHTML = badgesHtml;
+                parentDiv.appendChild(badgeContainer);
+            }
             
             // 格式化時間顯示
             const openTime = (route.open_time || '00:00').substring(0, 5);

@@ -821,7 +821,7 @@
 
                             routeSegments.forEach(seg => {
                                 // Calculate arrival at this specific stop
-                                const arrivalMins = tripStartMins + Math.ceil(seg.expected_duration_sec / 60);
+                                const arrivalMins = tripStartMins + Math.round(seg.expected_duration_sec / 60);
                                 
                                 // Calculate difference (handle midnight crossing logic via helper later, but raw diff here)
                                 let diff = arrivalMins - currentMins;
@@ -1982,7 +1982,7 @@
             const badges = [];
             // N = has_standing_bus (Normal/Standing) -> Blue/Standard
             if (route.has_standing_bus === 1) {
-                badges.push(`<span class="text-[10px] font-bold px-1.5 py-0.5 bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300 rounded-[6px] border border-blue-200/50 dark:border-blue-500/30 align-middle tracking-tight shadow-sm">N</span>`);
+                badges.push(`<span class="text-[10px] font-bold px-1.5 py-0.5 bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300 rounded-[6px] border border-blue-200/50 dark:border-blue-500/30 align-middle tracking-tight shadow-sm">S</span>`);
             }
             // NS = has_not_standing_bus (No Standing) -> Orange/Warning
             if (route.has_not_standing_bus === 1) {

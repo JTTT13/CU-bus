@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BusVibe Pro | Enterprise Transit Dashboard</title>
+    <title>CU BUS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <script>
@@ -33,11 +33,15 @@
             autoSwitchStop: true,  // NEW: Auto switch stop after GPS
             testTime: null,        // NEW: Test time (HH:MM format)
             testDay: null,         // NEW: Test day (0-6)
-            isDevMode: false       // NEW
+            isDevMode: false,      // NEW
+            showPastBuses: false,  // NEW: Show past 95min departed buses
+            isTestTimeFixed: true  // NEW: true=frozen, false=flowing
         };
         // [Location Priority] 優先使用記憶的 stopId，稍後由 loadData 內的 GPS 邏輯決定是否覆蓋
-        let { lang, isDark, mode: currentMode, autoSwitchStop, testTime, testDay, isDevMode } = settings;
+        let { lang, isDark, mode: currentMode, autoSwitchStop, testTime, testDay, isDevMode, showPastBuses, isTestTimeFixed } = settings;
         let currentStopId = settings.stopId || '';
+        // Re-anchor on reload: if flowing mode was active, start flowing from testTime now
+        let testTimeSetAt = (testTime && !isTestTimeFixed) ? Date.now() : null;
         
         // Apply Dark Mode immediately
         if (isDark) document.documentElement.classList.add('dark');
@@ -423,6 +427,16 @@
                         <h2 id="arrival-title" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Arrivals</h2>
                         <span id="selected-stop-name" class="hidden md:inline-block text-[10px] font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800">---</span>
                     </div>
+                    <div>
+                      <!-- Quick Past Buses shortcut: icon-only, subtle -->
+                      <button id="past-buses-quick-btn" onclick="toggleShowPastBuses()"
+                        class="w-7 h-7 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/10 transition-all active:scale-90"
+                        style="opacity:0.28">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </button>
+                    </div>
                 </div>
                 <div id="bus-list" class="bus-card-grid"></div>
             </section>
@@ -507,8 +521,26 @@
                 <div class="absolute top-[2px] left-[2px] w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300" id="auto-switch-knob"></div>
               </button>
             </div>
+      
+            <!-- Show Past Buses Toggle -->
+            <div class="flex items-center justify-between py-3 px-4 bg-white dark:bg-[#2C2C2E] rounded-[16px]">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-[10px] flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div class="flex flex-col">
+                  <span class="text-[15px] font-semibold text-slate-900 dark:text-white" data-i18n="showPastBuses"></span>
+                  <span class="text-[11px] text-slate-500 dark:text-slate-400" data-i18n="showPastBusesDesc"></span>
+                </div>
+              </div>
+              <button onclick="toggleShowPastBuses()" class="relative w-[51px] h-[31px] rounded-full transition-colors duration-300" id="past-buses-btn">
+                <div class="absolute top-[2px] left-[2px] w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300" id="past-buses-knob"></div>
+              </button>
+            </div>
           </div>
-
+      
           <!-- Advanced Section -->
           <div class="space-y-3">
             <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest" data-i18n="advanced">進階</h3>
@@ -545,6 +577,18 @@
 
                 <!-- Apple Style Picker Interface -->
                 <div class="p-4 space-y-4">
+                  <!-- Fixed / Flowing Toggle -->
+                  <div id="test-mode-selector" class="flex p-1 bg-slate-100 dark:bg-black/20 rounded-[10px]">
+                    <button onclick="setTestTimeMode(true)" id="test-mode-fixed-btn"
+                      class="flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1">
+                      <span>📌</span><span data-i18n="testModeFixed">固定</span>
+                    </button>
+                    <button onclick="setTestTimeMode(false)" id="test-mode-flow-btn"
+                      class="flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1">
+                      <span>▶️</span><span data-i18n="testModeFlowing">流動</span>
+                    </button>
+                  </div>
+
                   <!-- Day Selector (Auto-fit Grid) -->
                   <div class="p-1 bg-slate-100 dark:bg-black/20 rounded-[10px]">
                     <div class="grid grid-cols-7 gap-1" id="day-picker-container">
@@ -801,7 +845,8 @@
                                 if (originDiff < -720) originDiff += 1440;
                                 else if (originDiff > 720) originDiff -= 1440;
 
-                                if (originDiff >= -5 && originDiff <= 90) {
+                                const originPastLimit = showPastBuses ? -30 : -1;
+                                if (originDiff >= originPastLimit && originDiff <= 65) {
                                     const arrH = Math.floor(tripStartMins / 60) % 24;
                                     const arrM = tripStartMins % 60;
                                     const timeStr = `${arrH.toString().padStart(2, '0')}:${arrM.toString().padStart(2, '0')}`;
@@ -814,7 +859,8 @@
                                         stop_name: originStop ? (lang === 'zh' ? originStop.name_zh : originStop.name_en) : originId,
                                         arrival_time: timeStr,
                                         day_type: route.operating_day_type,
-                                        order_seq: tripStartMins
+                                        order_seq: tripStartMins,
+                                        isPast: originDiff < -1
                                     });
                                 }
                             }
@@ -829,8 +875,9 @@
                                 if (diff < -720) diff += 1440;
                                 else if (diff > 720) diff -= 1440;
 
-                                // Filter: Show buses arriving soon (up to 90 mins) or just left
-                                if (diff >= -5 && diff <= 90) {
+                                // Filter: Show buses arriving soon (up to 65 mins) or just left
+                                const pastLimit = showPastBuses ? -30 : -1;
+                                if (diff >= pastLimit && diff <= 65) {
                                     const arrH = Math.floor(arrivalMins / 60) % 24;
                                     const arrM = arrivalMins % 60;
                                     const timeStr = `${arrH.toString().padStart(2, '0')}:${arrM.toString().padStart(2, '0')}`;
@@ -843,7 +890,8 @@
                                         stop_name: targetStop ? (lang === 'zh' ? targetStop.name_zh : targetStop.name_en) : seg.to_stop_id,
                                         arrival_time: timeStr,
                                         day_type: route.operating_day_type,
-                                        order_seq: arrivalMins
+                                        order_seq: arrivalMins,
+                                        isPast: diff < -1
                                     });
                                 }
                             });
@@ -865,6 +913,7 @@
         let refreshTimer = 0; // [Stage 3] Countdown
         const REFRESH_INTERVAL = 30;
         let activeRouteId = null; // Track currently opened route modal
+        let lastRenderMinute = -1; // [Fix] Track last rendered minute for auto-update
 
         // [Fix C] Haversine Formula for accurate distance
         function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
@@ -898,14 +947,14 @@
                 scheduleInfo: "班次資料",
                 operatingDays: "行駛日子",
                 weekday: '教學日', nonteaching: '非教學日', sunday: '假日/週日', arrival: '實時到站', empty: '當前時段無班次', arrived: '已抵達', soon: '即將', unit: '分', search: '搜尋車站...', next: '後續車站 (預計)', term: '終點站',
-                settings: '設定', appearance: '外觀', theme: '深色模式', lang: '語言', behavior: '行為', autoSwitch: '自動切換車站', autoSwitchDesc: '定位後自動跳轉', advanced: '進階', devMode: '開發模式', devModeDesc: '啟用時間模擬與測試工具', simulation: '模擬中', resetRealTime: '重置為實時', timeHint: '點擊時間或日期即可模擬該時段班次'
+                settings: '設定', appearance: '外觀', theme: '深色模式', lang: '語言', behavior: '行為', autoSwitch: '自動切換車站', autoSwitchDesc: '定位後自動跳轉', showPastBuses: '顯示前班車', showPastBusesDesc: '顯示過去30分鐘已離站班次', advanced: '進階', devMode: '開發模式', devModeDesc: '啟用時間模擬與測試工具', simulation: '模擬中', resetRealTime: '重置為實時', timeHint: '點擊時間或日期即可模擬該時段班次', testModeFixed: '固定', testModeFlowing: '流動'
             },
             en: {
                 serviceHours: "Service Hours",
                 scheduleInfo: "Schedule Info",
                 operatingDays: "Operating Days",
                 weekday: 'Teaching', nonteaching: 'Non-Teaching', sunday: 'Sun/Holiday', arrival: 'Real-time Arrivals', empty: 'No service at this time', arrived: 'Arrived', soon: 'Soon', unit: 'min', search: 'Search stops...', next: 'Trip Timeline', term: 'Terminus',
-                settings: 'Settings', appearance: 'Appearance', theme: 'Dark Mode', lang: 'Language', behavior: 'Behavior', autoSwitch: 'Auto Switch Stop', autoSwitchDesc: 'Jump to stop after locating', advanced: 'Advanced', devMode: 'Dev Mode', devModeDesc: 'Enable time simulation tools', simulation: 'Simulating', resetRealTime: 'Reset to Live', timeHint: 'Tap time or day to simulate schedule'
+                settings: 'Settings', appearance: 'Appearance', theme: 'Dark Mode', lang: 'Language', behavior: 'Behavior', autoSwitch: 'Auto Switch Stop', autoSwitchDesc: 'Jump to stop after locating', showPastBuses: 'Show Past Buses', showPastBusesDesc: 'Show buses departed in past 30 mins', advanced: 'Advanced', devMode: 'Dev Mode', devModeDesc: 'Enable time simulation tools', simulation: 'Simulating', resetRealTime: 'Reset to Live', timeHint: 'Tap time or day to simulate schedule', testModeFixed: 'Fixed', testModeFlowing: 'Flowing'
             }
         };
 
@@ -1009,6 +1058,28 @@
                 }
             }
 
+            // 4b. Show Past Buses Toggle (Settings modal)
+            const pastBtn = document.getElementById('past-buses-btn');
+            const pastKnob = document.getElementById('past-buses-knob');
+            if (pastBtn && pastKnob) {
+                if (showPastBuses) {
+                    pastBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-apple-accent';
+                    pastKnob.style.transform = 'translateX(20px)';
+                } else {
+                    pastBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-slate-300';
+                    pastKnob.style.transform = 'translateX(0)';
+                }
+            }
+
+            // 4c. Quick Past Buses icon (header shortcut)
+            const quickBtn = document.getElementById('past-buses-quick-btn');
+            if (quickBtn) {
+                quickBtn.style.opacity = showPastBuses ? '1' : '0.28';
+                quickBtn.title = showPastBuses
+                    ? (lang === 'zh' ? '隱藏前班車' : 'Hide Past Buses')
+                    : (lang === 'zh' ? '顯示前班車' : 'Show Past Buses');
+            }
+
             // 5. Dev Mode Toggle
             const devBtn = document.getElementById('dev-mode-btn');
             const devKnob = document.getElementById('dev-mode-knob');
@@ -1050,6 +1121,21 @@
                     if (testTime) timeDisplay.classList.add('text-apple-accent');
                     else timeDisplay.classList.remove('text-apple-accent');
                 }
+
+                // Update Fixed/Flowing segmented control
+                const fixedBtn = document.getElementById('test-mode-fixed-btn');
+                const flowBtn  = document.getElementById('test-mode-flow-btn');
+                if (fixedBtn && flowBtn) {
+                    const activeClass  = 'bg-white dark:bg-slate-600 text-black dark:text-white shadow-sm';
+                    const inactiveClass = 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300';
+                    if (isTestTimeFixed) {
+                        fixedBtn.className = `flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1 ${activeClass}`;
+                        flowBtn.className  = `flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1 ${inactiveClass}`;
+                    } else {
+                        flowBtn.className  = `flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1 ${activeClass}`;
+                        fixedBtn.className = `flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1 ${inactiveClass}`;
+                    }
+                }
             }
         };
 
@@ -1068,6 +1154,17 @@
             saveSettings();
             updateSettingsUI();
         };
+
+        window.toggleShowPastBuses = () => {
+            showPastBuses = !showPastBuses;
+            saveSettings();
+            updateSettingsUI();
+            // Directly recalculate arrivals with new window, then re-render (no full loadData needed)
+            if (db.routes.length > 0) {
+                db.arrivals = ScheduleEngine.getArrivals(getNow());
+                processAndRender();
+            }
+        }
 
         window.toggleDevMode = () => {
             isDevMode = !isDevMode;
@@ -1099,6 +1196,9 @@
         };
 
         function applyTestSettings() {
+            // Record anchor for flowing mode
+            testTimeSetAt = Date.now();
+
             // Update URL param
             const url = new URL(window.location);
             if (testTime) url.searchParams.set('time', testTime);
@@ -1116,6 +1216,7 @@
         window.clearTestTime = () => {
             testTime = null;
             testDay = null;
+            testTimeSetAt = null;
             
             // Clear URL param
             const url = new URL(window.location);
@@ -1127,6 +1228,16 @@
             loadData();
             
             if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+        };
+
+        window.setTestTimeMode = (fixed) => {
+            isTestTimeFixed = fixed;
+            // If switching to flowing and a time is already set, re-anchor now
+            if (!fixed && testTime) {
+                testTimeSetAt = Date.now();
+            }
+            saveSettings();
+            updateSettingsUI();
         };
 
         window.onload = () => {
@@ -1182,6 +1293,13 @@
             }
             
             d.setHours(parseInt(h), parseInt(m), 0, 0);
+
+            // Flowing mode: advance simulated time from the anchor point
+            if (!isTestTimeFixed && testTimeSetAt) {
+                const elapsed = Date.now() - testTimeSetAt;
+                return new Date(d.getTime() + elapsed);
+            }
+
             return d;
         }
 
@@ -1194,7 +1312,9 @@
                 autoSwitchStop,
                 testTime,
                 testDay,
-                isDevMode
+                isDevMode,
+                showPastBuses,
+                isTestTimeFixed
             }));
         }
 
@@ -1797,8 +1917,13 @@
             
             if (!diffEl || !labelEl) return;
             
-            // [Fix] Logic Sync: Treat 0 or less as Arrived to match processAndRender
-            if (diff <= 0) {
+            // Past bus: show minutes-ago (never flip to "已抵達")
+            if (card.getAttribute('data-is-past') === 'true') {
+              diffEl.textContent = Math.abs(diff);
+              labelEl.textContent = lang === 'zh' ? '分鐘前' : 'min ago';
+              card.classList.remove('text-emerald-600', 'text-rose-600');
+              card.classList.add('text-slate-400');
+            } else if (diff <= 0) {
               diffEl.textContent = '--';
               labelEl.textContent = i18n[lang].arrived;
               card.classList.remove('text-emerald-600', 'text-rose-600');
@@ -1816,14 +1941,22 @@
             }
           });
           
-          // 2️⃣ 如果過咗 90 分鐘，先至觸發 full render（移除過期巴士）
-          const needsFullRender = Array.from(document.querySelectorAll('[data-arrival-time]')).some(card => {
+          // 2️⃣ 判斷是否需要 full render
+          const tickPastLimit = showPastBuses ? -30 : -1;
+          
+          // [Fix] 當分鐘數改變時，強制 re-render（新班次進入65分鐘視窗）
+          const minuteChanged = currentMinutes !== lastRenderMinute;
+
+          const hasOutOfRangeCard = Array.from(document.querySelectorAll('[data-arrival-time]')).some(card => {
             const arrivalTime = card.getAttribute('data-arrival-time');
             const diff = calcDiffMinutes(arrivalTime, currentMinutes);
-            return diff < -5 || diff > 90; // 超出顯示範圍
+            return diff < tickPastLimit || diff > 65;
           });
-          
+
+          const needsFullRender = minuteChanged || hasOutOfRangeCard;
+
           if (needsFullRender) {
+            lastRenderMinute = currentMinutes;
             processAndRender(); // 只在必要時重建
           }
         }
@@ -1845,7 +1978,7 @@
             const now = getNow();
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
             // [Fix] Use reduce+spread to avoid mutating db.arrivals objects
-            const filtered = db.arrivals.reduce((acc, arr) => {
+            let filtered = db.arrivals.reduce((acc, arr) => {
                 if (arr.stop_id !== currentStopId) return acc;
                 const dt = arr.day_type || "";
                 let isMatch = false;
@@ -1858,7 +1991,8 @@
                 }
                 if (!isMatch) return acc;
                 const diff = calcDiffMinutes(arr.arrival_time, currentMinutes);
-                if (diff >= -1 && diff <= 60) acc.push({ ...arr, diff });
+                const renderPastLimit = showPastBuses ? -30 : -1;
+                if (diff >= renderPastLimit && diff <= 65) acc.push({ ...arr, diff });
                 return acc;
             }, []).sort((a, b) => a.diff - b.diff);
 
@@ -1900,18 +2034,24 @@
                 let statusCls = 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/30';
                 let timeLabel = i18n[lang].unit, displayDiff = bus.diff;
 
-                // [Fix] Logic Sync: <= 0 is Arrived
-                if (bus.diff <= 0) {
+                // Past buses (departed > 1 min ago)
+                if (bus.isPast && bus.diff < -1) {
+                    statusCls = 'text-slate-400 bg-slate-100 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/50';
+                    timeLabel = lang === 'zh' ? '分鐘前' : 'min ago'; displayDiff = Math.abs(bus.diff);
+                } else if (bus.diff <= 0) {
+                    // Fix Logic Sync: <= 0 is Arrived
                     statusCls = 'text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700';
                     timeLabel = i18n[lang].arrived; displayDiff = '--';
                 } else if (bus.diff <= 5) {
-                    statusCls = 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-800/30 font-bold'; 
+                    statusCls = 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-800/30 font-bold';
                     timeLabel = i18n[lang].soon;
                 }
 
+                const isPastCard = bus.isPast && bus.diff < -1;
+                const pastCardCls = isPastCard ? 'opacity-50' : '';
                 return `
                 <!-- 🔧 FIX: 加入 data-arrival-time 屬性 -->
-                <div data-arrival-time="${bus.arrival_time}" onclick="toggleTripDetails('${tripId}')" class="apple-card rounded-[24px] px-5 py-5 cursor-pointer active:scale-[0.98] ${isExpanded ? 'ring-2 ring-apple-accent/20 border-apple-accent/30' : ''}">
+                <div data-arrival-time="${bus.arrival_time}" data-is-past="${isPastCard}" onclick="toggleTripDetails('${tripId}')" class="apple-card rounded-[24px] px-5 py-5 cursor-pointer active:scale-[0.98] ${isExpanded ? 'ring-2 ring-apple-accent/20 border-apple-accent/30' : ''} ${pastCardCls}">
                     <div class="flex justify-between items-center">
                         <div class="flex items-center gap-4">
                             <div onclick="openRouteDetails('${bus.route_id}', event)" class="w-12 h-12 shrink-0 bg-black dark:bg-white rounded-[14px] flex items-center justify-center text-white dark:text-black font-black text-sm shadow-apple hover:scale-110 active:scale-90 transition-transform z-10 relative">
@@ -1970,8 +2110,23 @@
 
             // Update Time
             const timeStr = now.toLocaleTimeString('zh-HK', { hour12: false });
-            document.getElementById('current-time').innerHTML = mockTime ? `<span class="text-rose-500 font-bold">MOCK: ${timeStr}</span>` : timeStr;
+            document.getElementById('current-time').innerText = timeStr;
             
+            // Highlight time/date orange when testTime is active
+            const timeEl = document.getElementById('current-time');
+            const dateEl = document.getElementById('current-date');
+            if (testTime) {
+                timeEl.classList.add('text-orange-500');
+                timeEl.classList.remove('text-slate-400');
+                dateEl.classList.add('text-orange-400');
+                dateEl.classList.remove('text-slate-500');
+            } else {
+                timeEl.classList.remove('text-orange-500');
+                timeEl.classList.add('text-slate-400');
+                dateEl.classList.remove('text-orange-400');
+                dateEl.classList.add('text-slate-500');
+            }
+
             // [Stage 1] Update Date (e.g. SUN 15 FEB)
             const dateStr = now.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
             document.getElementById('current-date').innerText = dateStr;

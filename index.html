@@ -4,14 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CU BUS</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
-                    fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Inter', 'system-ui'], mono: ['JetBrains Mono'] },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Inter', 'system-ui'],
+                        mono: ['JetBrains Mono']
+                    },
                     boxShadow: {
                         'apple': '0 8px 30px rgb(0,0,0,0.04)',
                         'apple-dark': '0 8px 30px rgb(0,0,0,0.2)'
@@ -22,84 +26,125 @@
                 }
             }
         }
-        
-        // [Fix FOUC] Load settings before render
+
         const SETTINGS_KEY = 'cuhk_bus_vibe_settings';
         let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {
             stopId: '',
             lang: 'zh',
             isDark: window.matchMedia('(prefers-color-scheme: dark)').matches,
             mode: (new Date().getDay() === 0) ? 'sunday' : 'weekday',
-            autoSwitchStop: true,  // NEW: Auto switch stop after GPS
-            testTime: null,        // NEW: Test time (HH:MM format)
-            testDay: null,         // NEW: Test day (0-6)
-            isDevMode: false,      // NEW
-            showPastBuses: false,  // NEW: Show past 95min departed buses
-            isTestTimeFixed: true  // NEW: true=frozen, false=flowing
+            autoSwitchStop: true,
+            testTime: null,
+            testDay: null,
+            isDevMode: false,
+            showPastBuses: false,
+            isTestTimeFixed: true
         };
-        // [Location Priority] 優先使用記憶的 stopId，稍後由 loadData 內的 GPS 邏輯決定是否覆蓋
+
         let { lang, isDark, mode: currentMode, autoSwitchStop, testTime, testDay, isDevMode, showPastBuses, isTestTimeFixed } = settings;
         let currentStopId = settings.stopId || '';
-        // Re-anchor on reload: if flowing mode was active, start flowing from testTime now
         let testTimeSetAt = (testTime && !isTestTimeFixed) ? Date.now() : null;
-        
-        // Apply Dark Mode immediately
+
         if (isDark) document.documentElement.classList.add('dark');
     </script>
     <style>
-        /* [New] Timeline Apple Style Enhancements */
         .timeline-line {
             position: absolute;
-            left: 15px; /* Center of the dot (w-8/2 - line/2) */
-            top: 28px;  /* Start below the first dot center */
+            left: 15px;
+            top: 28px;
             bottom: 0;
             width: 2px;
-            background: #E5E5EA; /* Apple System Gray 5 */
+            background: #E5E5EA;
             z-index: 0;
         }
-        .dark .timeline-line { background: #38383A; }
-        
-        .timeline-node-container:last-child .timeline-line { display: none; }
-        
-        /* Pulse for Current Stop */
+        .dark .timeline-line {
+            background: #38383A;
+        }
+        .timeline-node-container:last-child .timeline-line {
+            display: none;
+        }
+
         @keyframes apple-pulse-blue {
-            0% { box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.4); }
-            70% { box-shadow: 0 0 0 6px rgba(0, 122, 255, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); }
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 6px rgba(0, 122, 255, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 122, 255, 0);
+            }
         }
         .current-stop-pulse {
             animation: apple-pulse-blue 2s infinite;
         }
 
-        body { -webkit-tap-highlight-color: transparent; font-feature-settings: "cv02", "cv03", "cv04", "cv11"; }
-        #modal-route-icon { font-size: clamp(1.2rem, 5vw, 1.5rem); }
-        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
-        .dark .glass { background: rgba(29, 29, 31, 0.75); }
-        .apple-card { @apply bg-white/70 dark:bg-apple-dark/60 border border-white/20 dark:border-white/5 shadow-apple transition-all duration-300 ease-in-out; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
-        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
-        
-        .sticky-panel { position: sticky; top: 80px; z-index: 40; }
+        body {
+            -webkit-tap-highlight-color: transparent;
+            font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+        }
+        #modal-route-icon {
+            font-size: clamp(1.2rem, 5vw, 1.5rem);
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+        }
+        .dark .glass {
+            background: rgba(29, 29, 31, 0.75);
+        }
+        .apple-card {
+            @apply bg-white/70 dark:bg-apple-dark/60 border border-white/20 dark:border-white/5 shadow-apple transition-all duration-300 ease-in-out;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .sticky-panel {
+            position: sticky;
+            top: 80px;
+            z-index: 40;
+        }
         @media (max-width: 767px) {
-            .sticky-panel { margin: 0; padding: 1rem 0; border-bottom: none; background: transparent; }
+            .sticky-panel {
+                margin: 0;
+                padding: 1rem 0;
+                border-bottom: none;
+                background: transparent;
+            }
+        }
+        .bus-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 1.5rem;
+        }
+        @media (max-width: 640px) {
+            .bus-card-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+        }
+        .pb-safe-area {
+            padding-bottom: calc(2.5rem + env(safe-area-inset-bottom));
+        }
+        nav.sticky {
+            z-index: 100;
+        }
+        #settings-modal {
+            z-index: 110;
         }
 
-        .bus-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem; }
-        @media (max-width: 640px) { .bus-card-grid { grid-template-columns: 1fr; gap: 1rem; } }
-        /* [Fix E] iOS Safe Area Support - Increased padding for bottom sheet */
-        .pb-safe-area { padding-bottom: calc(2.5rem + env(safe-area-inset-bottom)); }
-        
-        /* [Apple Hierarchy] Settings(110) > Navbar(100) > Route Modal(90) */
-        nav.sticky { z-index: 100; }
-        #settings-modal { z-index: 110; }
-
-        /* [Route Modal] Apple-grade blur & animation */
         #route-modal {
             opacity: 0;
             visibility: hidden;
-            transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                        visibility 0.35s;
+            transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.35s;
         }
         #route-modal.visible {
             opacity: 1;
@@ -107,27 +152,26 @@
             backdrop-filter: blur(24px) saturate(200%);
             -webkit-backdrop-filter: blur(24px) saturate(200%);
         }
-
-        /* [Fix] 防止背景滾動 */
-        body.modal-open { overflow: hidden; }
-
-        /* [Drawer Styles] Enhanced spring animation */
-        #route-modal-card {
-            transition: transform 0.45s cubic-bezier(0.28, 0.84, 0.42, 1),
-                        opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        body.modal-open {
+            overflow: hidden;
         }
-        
+
+        #route-modal-card {
+            transition: transform 0.45s cubic-bezier(0.28, 0.84, 0.42, 1), opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
         @media (max-width: 767px) {
             #route-modal-card {
                 position: fixed;
-                bottom: 0; left: 0; right: 0;
+                bottom: 0;
+                left: 0;
+                right: 0;
                 width: 100%;
                 height: auto;
-                max-height: calc(100dvh - 64px); /* Optimized for navbar */
-                border-radius: 28px 28px 0 0; /* Larger radius */
+                max-height: calc(100dvh - 64px);
+                border-radius: 28px 28px 0 0;
                 transform: translateY(110%);
                 padding-bottom: calc(1rem + env(safe-area-inset-bottom));
-                background: #F5F5F7; /* Lighter for depth */
+                background: #F5F5F7;
                 box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.12);
             }
             .dark #route-modal-card {
@@ -138,9 +182,10 @@
                 transform: translateY(0);
                 opacity: 1;
             }
-            .dragging { transition: none !important; }
+            .dragging {
+                transition: none !important;
+            }
         }
-
         @media (min-width: 768px) {
             #route-modal {
                 justify-content: flex-end;
@@ -151,16 +196,14 @@
             #route-modal-card {
                 height: auto;
                 max-height: calc(100vh - 5rem);
-                width: 420px; /* Slightly wider */
-                border-radius: 24px; /* Consistent with iOS */
+                width: 420px;
+                border-radius: 24px;
                 transform: translateX(110%) scale(0.96);
                 opacity: 0;
-                box-shadow: -16px 0 64px rgba(0, 0, 0, 0.18),
-                            0 8px 32px rgba(0, 0, 0, 0.08);
+                box-shadow: -16px 0 64px rgba(0, 0, 0, 0.18), 0 8px 32px rgba(0, 0, 0, 0.08);
             }
             .dark #route-modal-card {
-                box-shadow: -16px 0 64px rgba(0, 0, 0, 0.5),
-                            0 8px 32px rgba(0, 0, 0, 0.3);
+                box-shadow: -16px 0 64px rgba(0, 0, 0, 0.5), 0 8px 32px rgba(0, 0, 0, 0.3);
             }
             #route-modal.visible #route-modal-card {
                 transform: translateX(0) scale(1);
@@ -168,130 +211,122 @@
             }
         }
 
-        /* 1. Apple-style Info Pill with subtle elevation */
         .info-pill {
-            @apply bg-white/60 dark:bg-white/[0.03]
-                   border border-black/[0.08] dark:border-white/[0.08]
-                   rounded-2xl p-4 flex flex-col gap-1.5
-                   shadow-sm hover:shadow-md
-                   transition-all duration-200;
+            @apply bg-white/60 dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.08] rounded-2xl p-4 flex flex-col gap-1.5 shadow-sm hover:shadow-md transition-all duration-200;
             height: auto;
             min-height: min-content;
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
         }
-        
         .info-pill:active {
             transform: scale(0.985);
         }
-        
-        /* 2. Modal 內容區優化間距與滾動體驗 */
+
         #route-modal-card .overflow-y-auto {
             padding-top: 0.75rem;
             padding-bottom: 1.5rem;
             display: flex;
             flex-direction: column;
-            gap: 10px; /* Tighter spacing for professionalism */
+            gap: 10px;
             overscroll-behavior: contain;
         }
-        
-        /* 3. Section Headers (Apple System Typography) */
+
         .pill-label {
             font-size: 11px;
             font-weight: 700;
             letter-spacing: 0.06em;
             text-transform: uppercase;
-            color: rgba(60, 60, 67, 0.6); /* iOS System Gray */
+            color: rgba(60, 60, 67, 0.6);
         }
         .dark .pill-label {
             color: rgba(235, 235, 245, 0.6);
         }
-        
         .pill-value {
             font-size: 15px;
             font-weight: 600;
             line-height: 1.4;
-            color: rgb(28, 28, 30); /* iOS Label */
+            color: rgb(28, 28, 30);
         }
         .dark .pill-value {
             color: rgb(242, 242, 247);
         }
 
-        /* 3. 強化 Grabber 視覺 */
         .apple-grabber {
             width: 36px;
             height: 5px;
-            background: rgba(0,0,0,0.1);
+            background: rgba(0, 0, 0, 0.1);
             border-radius: 10px;
         }
-        .dark .apple-grabber { background: rgba(255,255,255,0.15); }
+        .dark .apple-grabber {
+            background: rgba(255, 255, 255, 0.15);
+        }
 
-        /* Apple Style Single Spin */
         @keyframes apple-rotation {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
         }
         .animate-apple-spin {
-          animation: apple-rotation 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: apple-rotation 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
-  
-        /* Smooth Scroll Behavior for Timeline */
+
         .timeline-scroll-container {
-          scroll-behavior: smooth;
-          -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
         }
-        
-        /* Hide scrollbar but keep functionality */
         .timeline-scroll-container::-webkit-scrollbar {
-          width: 0px;
-          background: transparent;
+            width: 0px;
+            background: transparent;
         }
-  
-        /* Timeline Pulse Animation */
+
         @keyframes pulse-ring {
-          0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.7); }
-          70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(0, 122, 255, 0); }
-          100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); }
+            0% {
+                transform: scale(0.8);
+                box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.7);
+            }
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 6px rgba(0, 122, 255, 0);
+            }
+            100% {
+                transform: scale(0.8);
+                box-shadow: 0 0 0 0 rgba(0, 122, 255, 0);
+            }
         }
         .timeline-pulse {
-          animation: pulse-ring 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+            animation: pulse-ring 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
         }
-        
-        /* [Feature] Mobile Locating Spinner */
+
         .locating-spinner {
             background: transparent !important;
             border: 2px solid rgba(0, 122, 255, 0.3);
             border-top-color: #007AFF;
             border-radius: 50%;
-            width: 14px !important; /* Slightly larger than the dot */
+            width: 14px !important;
             height: 14px !important;
             box-shadow: none !important;
             animation: apple-rotation 1s linear infinite;
         }
 
-        /* Apple-style Spring Modal Animation */
         #settings-backdrop {
-            /* Blur attached to backdrop itself - fades out with opacity */
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
             transition: opacity 0.25s cubic-bezier(0.32, 0.72, 0, 1);
             will-change: opacity;
         }
-        
         #settings-card {
-            /* Spring effect: overshoot + smooth settle */
-            transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
-                        opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             will-change: transform, opacity;
         }
 
-        /* [New] Timeline Gradient Mask for smooth fade out */
         .timeline-mask {
             mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
             -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
         }
 
-        /* Apple Maps Style Location Puck */
         .apple-puck {
             width: 14px;
             height: 14px;
@@ -303,124 +338,115 @@
             position: relative;
         }
         .dark .apple-puck {
-            border-color: #1C1C1E; /* Match dark card bg */
+            border-color: #1C1C1E;
             box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.25);
         }
-        
-        /* Continuous Line Fix */
+
         .timeline-spine {
-          position: absolute;
-          left:27px; /* 20px (px-5 padding) + 7px (center of w-14px container) = 27px */
-          top: 0;
-          bottom: 0;
-          width: 2px;
-          background-color: #E5E5EA;
-          z-index: 0;
+            position: absolute;
+            left: 27px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: #E5E5EA;
+            z-index: 0;
         }
-        .dark .timeline-spine { background-color: #38383A; }
+        .dark .timeline-spine {
+            background-color: #38383A;
+        }
+
+        .skeleton-pulse {
+            animation: skeleton-loading 1.5s ease-in-out infinite;
+            background: linear-gradient(90deg, #e5e5ea 25%, #f0f0f5 50%, #e5e5ea 75%);
+            background-size: 200% 100%;
+        }
+        .dark .skeleton-pulse {
+            background: linear-gradient(90deg, #2c2c2e 25%, #3a3a3c 50%, #2c2c2e 75%);
+            background-size: 200% 100%;
+        }
+        @keyframes skeleton-loading {
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
+        }
     </style>
 </head>
 <body class="bg-apple-gray dark:bg-[#000000] text-slate-900 dark:text-slate-100 min-h-screen font-sans antialiased tracking-tight">
 
-    <!-- Navbar: Apple Style Glass Floating Bar -->
-    <nav class="sticky top-0 z-[100] glass border-b border-black/[0.05] dark:border-white/[0.05] h-16">
-        <!-- Progress Bar Removed in favor of Ring Button -->
+    <nav class="sticky top-0 z-[100] glass border-b border-black/[0.05] dark:border-white/[0.05] h-16" role="banner" aria-label="Main navigation">
         <div class="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <div class="w-9 h-9 bg-black dark:bg-white rounded-[10px] flex items-center justify-center text-white dark:text-black font-[900] text-lg tracking-tighter shadow-apple">CU</div>
+                <div class="w-9 h-9 bg-black dark:bg-white rounded-[10px] flex items-center justify-center text-white dark:text-black font-[900] text-lg tracking-tighter shadow-apple" aria-hidden="true">CU</div>
                 <div class="flex flex-col justify-center h-9">
                     <span class="text-[14px] font-extrabold tracking-tight leading-none text-slate-900 dark:text-white">BUS</span>
                     <div class="flex flex-col leading-none mt-0.5">
                         <span id="current-date" class="text-[9px] font-bold text-slate-500 uppercase tracking-wider">---</span>
-                        <span id="current-time" class="text-[9px] font-bold text-slate-400 font-mono mt-[1px]">00:00:00</span>
+                        <span id="current-time" class="text-[9px] font-bold text-slate-400 font-mono mt-[1px]" aria-live="polite">00:00:00</span>
                     </div>
                 </div>
             </div>
             <div class="flex items-center gap-2">
-              <!-- Settings Button (Apple Style) -->
-              <button onclick="toggleSettings()" class="w-9 h-9 flex items-center justify-center hover:bg-black/[0.05] dark:hover:bg-white/[0.1] rounded-full transition-all active:scale-90">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-[18px] w-[18px] text-slate-700 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
-    
-              <!-- iOS Style Ring Progress Button -->
-              <div class="relative w-9 h-9 flex items-center justify-center">
-                  <!-- Ring Background & Progress -->
-                  <svg class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none transform scale-110" viewBox="0 0 36 36">
-                      <!-- Track -->
-                      <path class="text-black/5 dark:text-white/5" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" />
-                      <!-- Progress Indicator (C=100) -->
-                      <path id="refresh-ring" class="text-apple-accent transition-all duration-1000 ease-linear" stroke-dasharray="100, 100" stroke-dashoffset="100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
-                  </svg>
-                  
-                  <button onclick="loadData()" id="refresh-btn" class="w-full h-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-700 dark:text-slate-300 rounded-full transition-all active:scale-90 flex items-center justify-center z-10">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                <button onclick="toggleSettings()" class="w-9 h-9 flex items-center justify-center hover:bg-black/[0.05] dark:hover:bg-white/[0.1] rounded-full transition-all active:scale-90" aria-label="設定">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-[18px] w-[18px] text-slate-700 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                  </button>
-              </div>
+                </button>
+
+                <div class="relative w-9 h-9 flex items-center justify-center">
+                    <svg class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none transform scale-110" viewBox="0 0 36 36" aria-hidden="true">
+                        <path class="text-black/5 dark:text-white/5" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" />
+                        <path id="refresh-ring" class="text-apple-accent transition-all duration-1000 ease-linear" stroke-dasharray="100, 100" stroke-dashoffset="100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+                    </svg>
+                    <button onclick="loadData()" id="refresh-btn" class="w-full h-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-700 dark:text-slate-300 rounded-full transition-all active:scale-90 flex items-center justify-center z-10" aria-label="重新整理">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
     </nav>
 
     <main class="max-w-7xl mx-auto px-4 py-3 md:py-6">
         <div class="flex flex-col md:flex-row gap-4 lg:gap-6">
-            
-            <!-- Sidebar: Clean Apple Layout -->
             <aside class="w-full md:w-80 shrink-0">
                 <div class="sticky-panel space-y-6">
-                    <!-- Segmented Control (iOS Style) -->
-                    <div id="mode-selector" class="flex p-1 bg-black/[0.05] dark:bg-white/[0.1] rounded-[12px] backdrop-blur-md"></div>
-
-                    <!-- Stop Selector Card -->
+                    <div id="mode-selector" class="flex p-1 bg-black/[0.05] dark:bg-white/[0.1] rounded-[12px] backdrop-blur-md" role="tablist" aria-label="Schedule mode"></div>
                     <div class="apple-card rounded-[24px] overflow-hidden">
-                        <button onclick="toggleStopList()" class="w-full py-4 px-5 flex items-center justify-between md:hidden transition-colors">
+                        <button onclick="toggleStopList()" class="w-full py-4 px-5 flex items-center justify-between md:hidden transition-colors" aria-expanded="false" aria-controls="stop-list-container">
                             <div class="flex items-center gap-3">
-                                <!-- [Feature] ID added for animation state -->
                                 <div id="mobile-status-dot" class="w-2 h-2 rounded-full bg-apple-accent shadow-[0_0_8px_rgba(0,122,255,0.5)] transition-all"></div>
                                 <span id="mobile-current-stop" class="font-semibold text-sm text-slate-900 dark:text-white">Select Stop</span>
                             </div>
                             <svg id="stop-chevron" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>
                         </button>
 
-                        <!-- [Fix E] iOS Style Sheet Modal -->
                         <div id="stop-list-container" class="fixed inset-0 z-[100] hidden md:static md:block md:z-auto group" aria-hidden="true">
-                            <!-- Backdrop (Dimming Layer) -->
                             <div class="absolute inset-0 bg-black/40 backdrop-blur-sm md:hidden transition-opacity opacity-0 group-[.visible]:opacity-100" onclick="toggleStopList()"></div>
-                            
-                            <!-- Modal Content (Slide-up Sheet) -->
                             <div id="stop-list-sheet" class="absolute bottom-0 inset-x-0 max-h-[calc(100dvh-80px)] h-[85vh] bg-[#F2F2F7] dark:bg-[#1c1c1e] rounded-t-[20px] shadow-[0_-10px_40px_rgba(0,0,0,0.2)] transform translate-y-full transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-[.visible]:translate-y-0 flex flex-col md:relative md:inset-auto md:h-auto md:bg-transparent md:dark:bg-transparent md:rounded-none md:shadow-none md:transform-none md:translate-y-0">
-                                
-                                <!-- Drag Handle (Mobile Only) -->
                                 <div id="stop-list-handle" class="w-full h-8 flex items-center justify-center md:hidden shrink-0 cursor-grab active:cursor-grabbing">
                                     <div class="apple-grabber"></div>
                                 </div>
-
-                                <!-- Header Area -->
                                 <div class="px-4 pb-3 border-b border-black/[0.05] dark:border-white/[0.05] flex gap-2 shrink-0 md:pt-4 md:px-4">
-                                    <input type="text" id="stop-search" oninput="renderStopGrid()" placeholder="Search..." class="flex-1 h-10 bg-white dark:bg-[#2C2C2E] text-[15px] px-4 rounded-[10px] outline-none placeholder-gray-400 dark:placeholder-gray-500 shadow-sm md:bg-black/[0.03] md:dark:bg-white/[0.05] md:h-auto md:text-[13px] md:py-2 md:rounded-[12px] md:shadow-none focus:ring-2 ring-apple-accent/50 transition-all">
-                                    
-                                    <button id="gps-btn" onclick="findNearestStop()" class="w-10 h-10 shrink-0 bg-apple-accent text-white rounded-[10px] hover:bg-apple-accent/90 active:scale-95 transition-all shadow-sm flex items-center justify-center disabled:opacity-50 md:w-auto md:h-auto md:p-2 md:rounded-[12px]" title="Find nearest stop">
+                                    <input type="text" id="stop-search" oninput="debouncedRenderStopGrid()" placeholder="Search..." class="flex-1 h-10 bg-white dark:bg-[#2C2C2E] text-[15px] px-4 rounded-[10px] outline-none placeholder-gray-400 dark:placeholder-gray-500 shadow-sm md:bg-black/[0.03] md:dark:bg-white/[0.05] md:h-auto md:text-[13px] md:py-2 md:rounded-[12px] md:shadow-none focus:ring-2 ring-apple-accent/50 transition-all" aria-label="搜尋車站">
+                                    <button id="gps-btn" onclick="findNearestStop()" class="w-10 h-10 shrink-0 bg-apple-accent text-white rounded-[10px] hover:bg-apple-accent/90 active:scale-95 transition-all shadow-sm flex items-center justify-center disabled:opacity-50 md:w-auto md:h-auto md:p-2 md:rounded-[12px]" title="Find nearest stop" aria-label="定位最近車站">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                         </svg>
                                     </button>
                                 </div>
-
-                                <!-- Scrollable List Area -->
-                                <div id="stop-grid" class="flex-1 overflow-y-auto overscroll-contain p-3 space-y-1.5 md:max-h-[60vh] md:p-2 md:space-y-1 custom-scrollbar pb-safe-area">
-                                    <!-- List items injected here -->
-                                </div>
+                                <div id="stop-grid" class="flex-1 overflow-y-auto overscroll-contain p-3 space-y-1.5 md:max-h-[60vh] md:p-2 md:space-y-1 custom-scrollbar pb-safe-area" role="listbox" aria-label="車站列表"></div>
                             </div>
                         </div>
                     </div>
                 </div>
             </aside>
 
-            <!-- Main Content Area -->
             <section class="flex-1 space-y-3">
                 <div class="flex items-center justify-between px-1">
                     <div class="flex items-center gap-2">
@@ -428,270 +454,185 @@
                         <span id="selected-stop-name" class="hidden md:inline-block text-[10px] font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800">---</span>
                     </div>
                     <div>
-                      <!-- Quick Past Buses shortcut: icon-only, subtle -->
-                      <button id="past-buses-quick-btn" onclick="toggleShowPastBuses()"
-                        class="w-7 h-7 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/10 transition-all active:scale-90"
-                        style="opacity:0.28">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </button>
+                        <button id="past-buses-quick-btn" onclick="toggleShowPastBuses()" class="w-7 h-7 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/10 transition-all active:scale-90" style="opacity:0.28" aria-label="顯示前班車" title="顯示前班車">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
-                <div id="bus-list" class="bus-card-grid"></div>
+                <div id="bus-list" class="bus-card-grid" aria-live="polite" aria-label="到站資訊"></div>
             </section>
         </div>
     </main>
 
-    <!-- Settings Modal (Apple Style) -->
-    <div id="settings-modal" class="fixed inset-0 z-[110] hidden items-center justify-center">
-      <!-- Backdrop -->
-      <div id="settings-backdrop" class="absolute inset-0 bg-black/40 dark:bg-black/60 opacity-0" onclick="toggleSettings()"></div>
-      
-      <!-- Modal Card -->
-      <div id="settings-card" class="relative bg-[#F2F2F7] dark:bg-[#1C1C1E] rounded-[28px] shadow-2xl w-[90vw] max-w-[420px] overflow-hidden border border-black/5 dark:border-white/10 transform scale-95 opacity-0 transition-all duration-500">
-        
-        <!-- Header -->
-        <div class="px-6 pt-6 pb-4 border-b border-black/5 dark:border-white/5">
-          <div class="flex items-center justify-between">
-            <h2 class="text-[22px] font-extrabold tracking-tight text-slate-900 dark:text-white" data-i18n="settings">設定</h2>
-            <button onclick="toggleSettings()" class="w-9 h-9 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 rounded-full flex items-center justify-center transition-all active:scale-90">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- Content -->
-        <div class="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
-          
-          <!-- Appearance Section -->
-          <div class="space-y-3">
-            <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest" data-i18n="appearance">外觀</h3>
-            
-            <!-- Theme Toggle -->
-            <div class="flex items-center justify-between py-3 px-4 bg-white dark:bg-[#2C2C2E] rounded-[16px]">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[10px] flex items-center justify-center">
-                  <svg id="settings-theme-icon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"></svg>
-                </div>
-                <span class="text-[15px] font-semibold text-slate-900 dark:text-white" data-i18n="theme">深色模式</span>
-              </div>
-              <button onclick="toggleDarkMode(); updateSettingsUI()" class="relative w-[51px] h-[31px] rounded-full transition-colors duration-300" id="theme-toggle-btn">
-                <div class="absolute top-[2px] left-[2px] w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300" id="theme-toggle-knob"></div>
-              </button>
-            </div>
-
-            <!-- Language Toggle -->
-            <div class="flex items-center justify-between py-3 px-4 bg-white dark:bg-[#2C2C2E] rounded-[16px]">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-[10px] flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                  </svg>
-                </div>
-                <span id="lang-label" class="text-[15px] font-semibold text-slate-900 dark:text-white">繁體中文</span>
-              </div>
-              <button onclick="toggleLang(); updateSettingsUI()" class="relative w-[51px] h-[31px] rounded-full transition-colors duration-300" id="lang-toggle-btn">
-                <div class="absolute top-[2px] left-[2px] w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300" id="lang-toggle-knob"></div>
-              </button>
-            </div>
-          </div>
-
-          <!-- Behavior Section -->
-          <div class="space-y-3">
-            <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest" data-i18n="behavior">行為</h3>
-            
-            <!-- Auto Switch Stop Toggle -->
-            <div class="flex items-center justify-between py-3 px-4 bg-white dark:bg-[#2C2C2E] rounded-[16px]">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-[10px] flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </div>
-                <div class="flex flex-col">
-                  <span class="text-[15px] font-semibold text-slate-900 dark:text-white" data-i18n="autoSwitch">自動切換車站</span>
-                  <span class="text-[11px] text-slate-500 dark:text-slate-400" data-i18n="autoSwitchDesc">定位後自動跳轉</span>
-                </div>
-              </div>
-              <button onclick="toggleAutoSwitch()" class="relative w-[51px] h-[31px] rounded-full transition-colors duration-300" id="auto-switch-btn">
-                <div class="absolute top-[2px] left-[2px] w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300" id="auto-switch-knob"></div>
-              </button>
-            </div>
-      
-            <!-- Show Past Buses Toggle -->
-            <div class="flex items-center justify-between py-3 px-4 bg-white dark:bg-[#2C2C2E] rounded-[16px]">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-[10px] flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div class="flex flex-col">
-                  <span class="text-[15px] font-semibold text-slate-900 dark:text-white" data-i18n="showPastBuses"></span>
-                  <span class="text-[11px] text-slate-500 dark:text-slate-400" data-i18n="showPastBusesDesc"></span>
-                </div>
-              </div>
-              <button onclick="toggleShowPastBuses()" class="relative w-[51px] h-[31px] rounded-full transition-colors duration-300" id="past-buses-btn">
-                <div class="absolute top-[2px] left-[2px] w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300" id="past-buses-knob"></div>
-              </button>
-            </div>
-          </div>
-      
-          <!-- Advanced Section -->
-          <div class="space-y-3">
-            <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest" data-i18n="advanced">進階</h3>
-
-            <!-- Dev Mode Toggle -->
-            <div class="flex items-center justify-between py-3 px-4 bg-white dark:bg-[#2C2C2E] rounded-[16px]">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-gradient-to-br from-gray-500 to-slate-600 rounded-[10px] flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                  </svg>
-                </div>
-                <div class="flex flex-col">
-                  <span class="text-[15px] font-semibold text-slate-900 dark:text-white" data-i18n="devMode">開發模式</span>
-                  <span class="text-[11px] text-slate-500 dark:text-slate-400" data-i18n="devModeDesc">啟用時間模擬與測試工具</span>
-                </div>
-              </div>
-              <button onclick="toggleDevMode()" class="relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-slate-300" id="dev-mode-btn">
-                <div class="absolute top-[2px] left-[2px] w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300" id="dev-mode-knob"></div>
-              </button>
-            </div>
-            
-            <!-- Test Time Controller (Hidden by default) -->
-            <div id="test-time-panel" class="hidden overflow-hidden transition-all duration-300">
-              <div class="bg-white dark:bg-[#2C2C2E] rounded-[16px] overflow-hidden">
-                <!-- Header Status -->
-                <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-700/50 flex justify-between items-center bg-slate-50/50 dark:bg-white/5">
-                   <div class="flex items-center gap-2">
-                     <div class="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></div>
-                     <span class="text-[12px] font-bold text-slate-500 uppercase tracking-wider" data-i18n="simulation">模擬中</span>
-                   </div>
-                   <button onclick="clearTestTime()" class="text-[12px] font-medium text-red-500 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" data-i18n="resetRealTime">重置為實時</button>
-                </div>
-
-                <!-- Apple Style Picker Interface -->
-                <div class="p-4 space-y-4">
-                  <!-- Fixed / Flowing Toggle -->
-                  <div id="test-mode-selector" class="flex p-1 bg-slate-100 dark:bg-black/20 rounded-[10px]">
-                    <button onclick="setTestTimeMode(true)" id="test-mode-fixed-btn"
-                      class="flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1">
-                      <span>📌</span><span data-i18n="testModeFixed">固定</span>
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 z-[110] hidden items-center justify-center" role="dialog" aria-modal="true" aria-label="設定面板">
+        <div id="settings-backdrop" class="absolute inset-0 bg-black/40 dark:bg-black/60 opacity-0" onclick="toggleSettings()"></div>
+        <div id="settings-card" class="relative bg-[#F2F2F7] dark:bg-[#1C1C1E] rounded-[28px] shadow-2xl w-[90vw] max-w-[420px] overflow-hidden border border-black/5 dark:border-white/10 transform scale-95 opacity-0 transition-all duration-500">
+            <div class="px-6 pt-6 pb-4 border-b border-black/5 dark:border-white/5">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-[22px] font-extrabold tracking-tight text-slate-900 dark:text-white" data-i18n="settings">設定</h2>
+                    <button onclick="toggleSettings()" class="w-9 h-9 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 rounded-full flex items-center justify-center transition-all active:scale-90" aria-label="關閉設定">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                     </button>
-                    <button onclick="setTestTimeMode(false)" id="test-mode-flow-btn"
-                      class="flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1">
-                      <span>▶️</span><span data-i18n="testModeFlowing">流動</span>
-                    </button>
-                  </div>
-
-                  <!-- Day Selector (Auto-fit Grid) -->
-                  <div class="p-1 bg-slate-100 dark:bg-black/20 rounded-[10px]">
-                    <div class="grid grid-cols-7 gap-1" id="day-picker-container">
-                       <!-- JS will inject buttons here -->
-                    </div>
-                  </div>
-
-                  <!-- Time Scroller Simulation -->
-                  <div class="flex items-center justify-center gap-4 py-2">
-                    <div class="relative w-full h-[44px] bg-slate-100 dark:bg-black/20 rounded-[10px] flex items-center px-4 group cursor-pointer" onclick="document.getElementById('test-time-native').showPicker()">
-                      <span class="text-slate-400 mr-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      </span>
-                      <span id="time-display" class="text-[19px] font-mono font-semibold text-slate-900 dark:text-white tracking-wide">--:--</span>
-                      
-                      <!-- Hidden Native Input for best mobile experience -->
-                      <input type="time" id="test-time-native" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" onchange="handleTimeChange(this.value)">
-                      
-                      <div class="absolute right-3 text-slate-400 group-hover:text-apple-accent transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <!-- Info text -->
-                  <p class="text-[10px] text-center text-slate-400 dark:text-slate-500" data-i18n="timeHint">點擊時間或日期即可模擬該時段班次</p>
                 </div>
-              </div>
             </div>
-          </div>
-
-        </div>
-
-        <!-- Footer -->
-        <div class="px-6 py-4 border-t border-black/5 dark:border-white/5">
-          <p class="text-[11px] text-center text-slate-400 font-medium">CU BUS BY JT.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- [Feature] Route Detail Modal (Apple Style) -->
-    <!-- z-index: 90 確保在 Navbar(100) 下方，但在內容上方 -->
-    <div id="route-modal" class="fixed inset-0 z-[90] hidden items-center justify-center">
-        <!-- Backdrop: 背景使用更淡的遮罩，強調模糊而非變暗 -->
-        <div class="absolute inset-0 bg-white/10 dark:bg-black/20 transition-opacity" onclick="closeRouteModal()"></div>
-        
-        <!-- Modal Card -->
-        <div id="route-modal-card" class="relative bg-[#F2F2F7]/95 dark:bg-[#1C1C1E]/95 backdrop-blur-2xl shadow-2xl overflow-hidden flex flex-col border border-white/20 dark:border-white/5">
-            
-            <!-- Drag Handle (Mobile): Apple-style grabber -->
-            <div class="h-8 w-full flex items-center justify-center md:hidden shrink-0 cursor-grab active:cursor-grabbing"
-                 onclick="closeRouteModal()">
-                <div class="w-9 h-1.5 bg-black/[0.15] dark:bg-white/[0.2] rounded-full
-                            transition-all duration-200 active:scale-x-75"></div>
-            </div>
-
-            <!-- Header Section: Apple-grade hierarchy -->
-            <div class="px-6 md:px-8 pt-5 md:pt-6 pb-4 md:pb-5 shrink-0 border-b border-black/[0.06] dark:border-white/[0.06]">
-                <div class="flex items-start justify-between gap-4">
-                    <div class="flex gap-4 items-start flex-1 min-w-0">
-                        <!-- Route Icon with subtle animation -->
-                        <div id="modal-route-icon"
-                             class="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-black to-gray-800 dark:from-white dark:to-gray-200
-                                    rounded-[18px] flex items-center justify-center
-                                    text-white dark:text-black font-black text-xl md:text-2xl
-                                    shadow-lg hover:shadow-xl hover:scale-105
-                                    transition-all duration-300 shrink-0"></div>
-                        
-                        <div class="flex-1 min-w-0 pt-0.5">
-                            <!-- Route Name with better typography -->
-                            <h3 id="modal-route-name"
-                                class="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white
-                                       leading-tight mb-2 truncate"></h3>
-                            
-                            <!-- Metadata Row: Category + Badges -->
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <span id="modal-route-category"
-                                      class="inline-flex items-center text-[10px] font-bold px-2.5 py-1
-                                             bg-blue-500 text-white rounded-lg tracking-wide uppercase
-                                             shadow-sm ring-1 ring-blue-600/20"></span>
-                                <!-- Badges injected here via JS -->
+            <div class="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                <div class="space-y-3">
+                    <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest" data-i18n="appearance">外觀</h3>
+                    <div class="flex items-center justify-between py-3 px-4 bg-white dark:bg-[#2C2C2E] rounded-[16px]">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[10px] flex items-center justify-center">
+                                <svg id="settings-theme-icon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"></svg>
+                            </div>
+                            <span class="text-[15px] font-semibold text-slate-900 dark:text-white" data-i18n="theme">深色模式</span>
+                        </div>
+                        <button onclick="toggleDarkMode(); updateSettingsUI()" class="relative w-[51px] h-[31px] rounded-full transition-colors duration-300" id="theme-toggle-btn" role="switch" aria-checked="false" aria-label="切換深色模式">
+                            <div class="absolute top-[2px] left-[2px] w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300" id="theme-toggle-knob"></div>
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-between py-3 px-4 bg-white dark:bg-[#2C2C2E] rounded-[16px]">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-[10px] flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                                </svg>
+                            </div>
+                            <span id="lang-label" class="text-[15px] font-semibold text-slate-900 dark:text-white">繁體中文</span>
+                        </div>
+                        <button onclick="toggleLang(); updateSettingsUI()" class="relative w-[51px] h-[31px] rounded-full transition-colors duration-300" id="lang-toggle-btn" role="switch" aria-checked="false" aria-label="切換語言">
+                            <div class="absolute top-[2px] left-[2px] w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300" id="lang-toggle-knob"></div>
+                        </button>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest" data-i18n="behavior">行為</h3>
+                    <div class="flex items-center justify-between py-3 px-4 bg-white dark:bg-[#2C2C2E] rounded-[16px]">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-[10px] flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-[15px] font-semibold text-slate-900 dark:text-white" data-i18n="autoSwitch">自動切換車站</span>
+                                <span class="text-[11px] text-slate-500 dark:text-slate-400" data-i18n="autoSwitchDesc">定位後自動跳轉</span>
+                            </div>
+                        </div>
+                        <button onclick="toggleAutoSwitch()" class="relative w-[51px] h-[31px] rounded-full transition-colors duration-300" id="auto-switch-btn" role="switch" aria-checked="true" aria-label="自動切換車站">
+                            <div class="absolute top-[2px] left-[2px] w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300" id="auto-switch-knob"></div>
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-between py-3 px-4 bg-white dark:bg-[#2C2C2E] rounded-[16px]">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-[10px] flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-[15px] font-semibold text-slate-900 dark:text-white" data-i18n="showPastBuses"></span>
+                                <span class="text-[11px] text-slate-500 dark:text-slate-400" data-i18n="showPastBusesDesc"></span>
+                            </div>
+                        </div>
+                        <button onclick="toggleShowPastBuses()" class="relative w-[51px] h-[31px] rounded-full transition-colors duration-300" id="past-buses-btn" role="switch" aria-checked="false" aria-label="顯示前班車">
+                            <div class="absolute top-[2px] left-[2px] w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300" id="past-buses-knob"></div>
+                        </button>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest" data-i18n="advanced">進階</h3>
+                    <div class="flex items-center justify-between py-3 px-4 bg-white dark:bg-[#2C2C2E] rounded-[16px]">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-gradient-to-br from-gray-500 to-slate-600 rounded-[10px] flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                                </svg>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-[15px] font-semibold text-slate-900 dark:text-white" data-i18n="devMode">開發模式</span>
+                                <span class="text-[11px] text-slate-500 dark:text-slate-400" data-i18n="devModeDesc">啟用時間模擬與測試工具</span>
+                            </div>
+                        </div>
+                        <button onclick="toggleDevMode()" class="relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-slate-300" id="dev-mode-btn" role="switch" aria-checked="false" aria-label="開發模式">
+                            <div class="absolute top-[2px] left-[2px] w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300" id="dev-mode-knob"></div>
+                        </button>
+                    </div>
+                    <div id="test-time-panel" class="hidden overflow-hidden transition-all duration-300">
+                        <div class="bg-white dark:bg-[#2C2C2E] rounded-[16px] overflow-hidden">
+                            <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-700/50 flex justify-between items-center bg-slate-50/50 dark:bg-white/5">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></div>
+                                    <span class="text-[12px] font-bold text-slate-500 uppercase tracking-wider" data-i18n="simulation">模擬中</span>
+                                </div>
+                                <button onclick="clearTestTime()" class="text-[12px] font-medium text-red-500 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" data-i18n="resetRealTime">重置為實時</button>
+                            </div>
+                            <div class="p-4 space-y-4">
+                                <div id="test-mode-selector" class="flex p-1 bg-slate-100 dark:bg-black/20 rounded-[10px]">
+                                    <button onclick="setTestTimeMode(true)" id="test-mode-fixed-btn" class="flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1">
+                                        <span>📌</span><span data-i18n="testModeFixed">固定</span>
+                                    </button>
+                                    <button onclick="setTestTimeMode(false)" id="test-mode-flow-btn" class="flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1">
+                                        <span>▶️</span><span data-i18n="testModeFlowing">流動</span>
+                                    </button>
+                                </div>
+                                <div class="p-1 bg-slate-100 dark:bg-black/20 rounded-[10px]">
+                                    <div class="grid grid-cols-7 gap-1" id="day-picker-container"></div>
+                                </div>
+                                <div class="flex items-center justify-center gap-4 py-2">
+                                    <div class="relative w-full h-[44px] bg-slate-100 dark:bg-black/20 rounded-[10px] flex items-center px-4 group cursor-pointer" onclick="document.getElementById('test-time-native').showPicker()">
+                                        <span class="text-slate-400 mr-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        </span>
+                                        <span id="time-display" class="text-[19px] font-mono font-semibold text-slate-900 dark:text-white tracking-wide">--:--</span>
+                                        <input type="time" id="test-time-native" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" onchange="handleTimeChange(this.value)" aria-label="選擇模擬時間">
+                                        <div class="absolute right-3 text-slate-400 group-hover:text-apple-accent transition-colors">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="text-[10px] text-center text-slate-400 dark:text-slate-500" data-i18n="timeHint">點擊時間或日期即可模擬該時段班次</p>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Close Button (Desktop) -->
-                    <button onclick="closeRouteModal()"
-                            class="hidden md:flex w-9 h-9 bg-black/[0.06] dark:bg-white/[0.08]
-                                   hover:bg-black/[0.12] dark:hover:bg-white/[0.15]
-                                   rounded-full items-center justify-center
-                                   transition-all duration-200 active:scale-90 shrink-0"
-                            aria-label="Close">
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-black/5 dark:border-white/5">
+                <p class="text-[11px] text-center text-slate-400 font-medium">CU BUS BY JT.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Route Modal -->
+    <div id="route-modal" class="fixed inset-0 z-[90] hidden items-center justify-center" role="dialog" aria-modal="true" aria-label="路線詳情">
+        <div class="absolute inset-0 bg-white/10 dark:bg-black/20 transition-opacity" onclick="closeRouteModal()"></div>
+        <div id="route-modal-card" class="relative bg-[#F2F2F7]/95 dark:bg-[#1C1C1E]/95 backdrop-blur-2xl shadow-2xl overflow-hidden flex flex-col border border-white/20 dark:border-white/5">
+            <div class="h-8 w-full flex items-center justify-center md:hidden shrink-0 cursor-grab active:cursor-grabbing" onclick="closeRouteModal()">
+                <div class="w-9 h-1.5 bg-black/[0.15] dark:bg-white/[0.2] rounded-full transition-all duration-200 active:scale-x-75"></div>
+            </div>
+            <div class="px-6 md:px-8 pt-5 md:pt-6 pb-4 md:pb-5 shrink-0 border-b border-black/[0.06] dark:border-white/[0.06]">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex gap-4 items-start flex-1 min-w-0">
+                        <div id="modal-route-icon" class="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-black to-gray-800 dark:from-white dark:to-gray-200 rounded-[18px] flex items-center justify-center text-white dark:text-black font-black text-xl md:text-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 shrink-0"></div>
+                        <div class="flex-1 min-w-0 pt-0.5">
+                            <h3 id="modal-route-name" class="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight mb-2 truncate"></h3>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span id="modal-route-category" class="inline-flex items-center text-[10px] font-bold px-2.5 py-1 bg-blue-500 text-white rounded-lg tracking-wide uppercase shadow-sm ring-1 ring-blue-600/20"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="closeRouteModal()" class="hidden md:flex w-9 h-9 bg-black/[0.06] dark:bg-white/[0.08] hover:bg-black/[0.12] dark:hover:bg-white/[0.15] rounded-full items-center justify-center transition-all duration-200 active:scale-90 shrink-0" aria-label="關閉路線詳情">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5 text-slate-700 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
             </div>
-
-            <!-- Scrollable Body: Enhanced readability -->
             <div class="flex-1 overflow-y-auto custom-scrollbar px-6 md:px-8 pb-8 md:pb-10 pt-5">
-                
-                <!-- Service Hours Card -->
                 <div class="info-pill group">
                     <div class="flex items-center gap-2 mb-1">
                         <svg class="w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -701,8 +642,6 @@
                     </div>
                     <span id="modal-route-time" class="pill-value font-mono"></span>
                 </div>
-
-                <!-- Schedule Info Card -->
                 <div class="info-pill group">
                     <div class="flex items-center gap-2 mb-1">
                         <svg class="w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -712,8 +651,6 @@
                     </div>
                     <span id="modal-route-freq" class="pill-value leading-relaxed"></span>
                 </div>
-
-                <!-- Operating Days Card -->
                 <div class="info-pill group">
                     <div class="flex items-center gap-2 mb-1">
                         <svg class="w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -723,15 +660,7 @@
                     </div>
                     <span id="modal-route-days" class="pill-value text-sm"></span>
                 </div>
-
-                <!-- Remarks (Warning Style) -->
-                <div id="modal-remarks-container"
-                     class="mt-1 p-4 rounded-2xl
-                            bg-gradient-to-br from-amber-50 to-orange-50
-                            dark:from-amber-900/10 dark:to-orange-900/10
-                            border border-amber-200/60 dark:border-amber-700/40
-                            shadow-sm hidden
-                            animate-in fade-in slide-in-from-top-2 duration-300">
+                <div id="modal-remarks-container" class="mt-1 p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border border-amber-200/60 dark:border-amber-700/40 shadow-sm hidden">
                     <div class="flex gap-3">
                         <svg class="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -744,33 +673,212 @@
     </div>
 
     <script>
-        // [Refactor] Removed DATA_URL, using ScheduleEngine instead
-        // SETTINGS_KEY and variables are now defined in HEAD (Global scope)
-        // [Feature] Added routes array
         let db = { stops: [], arrivals: [], route_times: [], routes: [], segments: [], segmentsByRoute: {} };
-
         const urlParams = new URLSearchParams(window.location.search);
-        
-        // [Stage 1] Schedule Engine for Client-side Calculation
+        let mockTime = urlParams.get('time');
+
+        let isStopListOpen = false,
+            expandedTripId = null;
+        let isFirstLoad = true;
+        let fetchController = null;
+        let lastCheckedDay = new Date().getDay();
+        let userPos = null;
+        let lastUserPos = null;
+        let refreshTimer = 0;
+        const REFRESH_INTERVAL = 30;
+        let activeRouteId = null;
+        let lastRenderMinute = -1;
+        let renderStopGridTimer = null;
+        let tickScheduled = false;
+
+        const i18n = {
+            zh: {
+                serviceHours: "服務時間",
+                scheduleInfo: "班次資料",
+                operatingDays: "行駛日子",
+                weekday: '教學日',
+                nonteaching: '非教學日',
+                sunday: '假日/週日',
+                arrival: '實時到站',
+                empty: '當前時段無班次',
+                arrived: '已抵達',
+                soon: '即將',
+                unit: '分',
+                search: '搜尋車站...',
+                next: '後續車站 (預計)',
+                term: '終點站',
+                settings: '設定',
+                appearance: '外觀',
+                theme: '深色模式',
+                lang: '語言',
+                behavior: '行為',
+                autoSwitch: '自動切換車站',
+                autoSwitchDesc: '定位後自動跳轉',
+                showPastBuses: '顯示前班車',
+                showPastBusesDesc: '顯示過去30分鐘已離站班次',
+                advanced: '進階',
+                devMode: '開發模式',
+                devModeDesc: '啟用時間模擬與測試工具',
+                simulation: '模擬中',
+                resetRealTime: '重置為實時',
+                timeHint: '點擊時間或日期即可模擬該時段班次',
+                testModeFixed: '固定',
+                testModeFlowing: '流動',
+                loading: '載入中...',
+                loadError: '數據載入失敗',
+                noStopsFound: '找不到相關車站',
+                pastMinLabel: '分鐘前',
+                minAgoLabel: 'min ago',
+                gpsError: '無法獲取精確位置',
+                noGpsSupport: '不支援定位'
+            },
+            en: {
+                serviceHours: "Service Hours",
+                scheduleInfo: "Schedule Info",
+                operatingDays: "Operating Days",
+                weekday: 'Teaching',
+                nonteaching: 'Non-Teaching',
+                sunday: 'Sun/Holiday',
+                arrival: 'Real-time Arrivals',
+                empty: 'No service at this time',
+                arrived: 'Arrived',
+                soon: 'Soon',
+                unit: 'min',
+                search: 'Search stops...',
+                next: 'Trip Timeline',
+                term: 'Terminus',
+                settings: 'Settings',
+                appearance: 'Appearance',
+                theme: 'Dark Mode',
+                lang: 'Language',
+                behavior: 'Behavior',
+                autoSwitch: 'Auto Switch Stop',
+                autoSwitchDesc: 'Jump to stop after locating',
+                showPastBuses: 'Show Past Buses',
+                showPastBusesDesc: 'Show buses departed in past 30 mins',
+                advanced: 'Advanced',
+                devMode: 'Dev Mode',
+                devModeDesc: 'Enable time simulation tools',
+                simulation: 'Simulating',
+                resetRealTime: 'Reset to Live',
+                timeHint: 'Tap time or day to simulate schedule',
+                testModeFixed: 'Fixed',
+                testModeFlowing: 'Flowing',
+                loading: 'Loading...',
+                loadError: 'Data load failed',
+                noStopsFound: 'No stops found',
+                pastMinLabel: 'min ago',
+                minAgoLabel: 'min ago',
+                gpsError: 'GPS Error',
+                noGpsSupport: 'No GPS support'
+            }
+        };
+
+        function t(key) { return i18n[lang]?.[key] || key; }
+
+        function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = deg2rad(lat2 - lat1);
+            const dLon = deg2rad(lon2 - lon1);
+            const a = Math.sin(dLat / 2) ** 2 + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon /
+                2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        function deg2rad(deg) { return deg * (Math.PI / 180); }
+
+        function calcDiffMinutes(arrivalStr, currentTotalMinutes) {
+            const [h, m] = arrivalStr.split(':').map(Number);
+            const total = h * 60 + m;
+            let diff = total - currentTotalMinutes;
+            if (diff < -720) diff += 1440;
+            else if (diff > 720) diff -= 1440;
+            return diff;
+        }
+
+        function getNow() {
+            const timeSource = testTime || mockTime;
+            if (!timeSource) return new Date();
+            const [h, m] = timeSource.split(':');
+            const d = new Date();
+            if (testDay !== null) {
+                const currentDay = d.getDay();
+                d.setDate(d.getDate() + (testDay - currentDay));
+            }
+            d.setHours(parseInt(h), parseInt(m), 0, 0);
+            if (!isTestTimeFixed && testTimeSetAt) {
+                return new Date(d.getTime() + (Date.now() - testTimeSetAt));
+            }
+            return d;
+        }
+
+        function saveSettings() {
+            try {
+                localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+                    stopId: currentStopId,
+                    lang,
+                    isDark,
+                    mode: currentMode,
+                    autoSwitchStop,
+                    testTime,
+                    testDay,
+                    isDevMode,
+                    showPastBuses,
+                    isTestTimeFixed
+                }));
+            } catch (e) {
+                console.warn('[CU BUS] Failed to save settings:', e);
+            }
+        }
+
+        function formatTime(t) { return t.split(':').slice(0, 2).join(':'); }
+
+        function updateToggleButton(btnId, knobId, isActive) {
+            const btn = document.getElementById(btnId);
+            const knob = document.getElementById(knobId);
+            if (!btn || !knob) return;
+            btn.className =
+                `relative w-[51px] h-[31px] rounded-full transition-colors duration-300 ${isActive ? 'bg-apple-accent' : 'bg-slate-300'}`;
+            knob.style.transform = isActive ? 'translateX(20px)' : 'translateX(0)';
+            btn.setAttribute('aria-checked', isActive);
+        }
+
+        function updateI18n() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[lang]?.[key]) el.textContent = i18n[lang][key];
+            });
+        }
+
+        function updateStopLabels() {
+            const stop = db.stops.find(s => s.id === currentStopId);
+            const name = stop ? (lang === 'zh' ? stop.name_zh : stop.name_en) : '---';
+            document.getElementById('mobile-current-stop').innerText = name;
+            document.getElementById('selected-stop-name').innerText = name;
+            document.getElementById('arrival-title').innerText = t('arrival');
+        }
+
+        function updateLocatingStatus(isLocating) {
+            const btn = document.getElementById('gps-btn');
+            const mobileDot = document.getElementById('mobile-status-dot');
+            if (btn) {
+                btn.classList.toggle('animate-spin', isLocating);
+                btn.disabled = isLocating;
+            }
+            if (mobileDot) {
+                mobileDot.classList.toggle('locating-spinner', isLocating);
+            }
+        }
+
         const ScheduleEngine = {
             timeToMins: (timeStr) => {
                 if (!timeStr) return 0;
                 const [h, m] = timeStr.split(':').map(Number);
                 return h * 60 + m;
             },
-
-            isRouteActive: (route, mode) => {
-                if (!route || !route.operating_day_type) return false;
-                const dayType = route.operating_day_type;
-                if (mode === 'sunday') return dayType.includes('SUN') || dayType.includes('HOLIDAY');
-                if (mode === 'nonteaching') return dayType === 'MON_TO_SAT';
-                if (mode === 'weekday') return dayType.includes('MON_TO_SAT') || dayType.includes('TEACHING_ONLY');
-                return false;
-            },
-
             initRouteTimes: () => {
+                if (!db.routes) return {};
                 const times = {};
-                if (!db.routes) return times;
                 db.routes.forEach(r => {
                     times[r.id] = {
                         starttime: (r.open_time || '00:00').substring(0, 5),
@@ -780,67 +888,50 @@
                 });
                 return times;
             },
-
             getArrivals: (nowDate) => {
                 if (!db.routes || !db.segments || !db.stops) return [];
                 const currentMins = nowDate.getHours() * 60 + nowDate.getMinutes();
                 const isSaturday = nowDate.getDay() === 6;
                 const arrivals = [];
-                
                 const stopMap = {};
                 db.stops.forEach(s => stopMap[s.id] = s);
 
-                // [Perf] Reuse pre-built map from loadData; fallback to inline build on first call
-                const segmentsByRoute = Object.keys(db.segmentsByRoute).length > 0
-                    ? db.segmentsByRoute
-                    : db.segments.reduce((map, s) => {
+                const segmentsByRoute = Object.keys(db.segmentsByRoute).length > 0 ?
+                    db.segmentsByRoute :
+                    db.segments.reduce((map, s) => {
                         if (!map[s.route_id]) map[s.route_id] = [];
                         map[s.route_id].push(s);
                         return map;
                     }, {});
 
                 db.routes.forEach(route => {
-                    // [Fix] Instant Switch: Generate ALL modes upfront, filter only during render
-                    // However, we must respect strict day constraints if today is physically Saturday
-                    
-                    // Rule 1: Exclude Mon-Fri routes on Saturday (e.g., 6B)
                     if (isSaturday && route.operating_day_type.includes('MON_TO_FRI')) return;
 
                     const openMins = ScheduleEngine.timeToMins(route.open_time);
                     let closeMins = ScheduleEngine.timeToMins(route.close_time);
 
-                    // Rule 2: Early close for Routes 5, 6A, 7 on Saturday (approx 13:xx last bus)
                     if (isSaturday && ['5_cwc', '6A', '7'].includes(route.id)) {
                         closeMins = Math.min(closeMins, ScheduleEngine.timeToMins('13:26:00'));
                     }
-                    
-                    // [Fix] Handle departure_mins_json safely (it might be a string in some raw data, though file says array)
+
                     let depMins = route.departure_mins_json;
                     if (typeof depMins === 'string') {
-                        try { depMins = JSON.parse(depMins); } catch(e) { depMins = []; }
+                        try { depMins = JSON.parse(depMins); } catch (e) { depMins = []; }
                     }
                     if (!Array.isArray(depMins)) depMins = [];
-                    depMins = depMins.map(Number);
+                    depMins = depMins.map(Number).filter(m => !isNaN(m));
 
                     const startHour = Math.floor(openMins / 60);
                     const endHour = Math.floor(closeMins / 60);
 
-                    // Loop through each operating hour
                     for (let h = startHour; h <= endHour; h++) {
                         depMins.forEach(m => {
                             const tripStartMins = h * 60 + m;
-                            
-                            // Check if this specific trip is within operating window
                             if (tripStartMins < openMins || tripStartMins > closeMins) return;
 
                             const routeSegments = segmentsByRoute[route.id] || [];
-                            
-                            // [Fix] Add Origin Stop (Departure) Logic
-                            if (routeSegments.length > 0) {
-                                // Assume all segments for a route share the same origin (from_stop_id)
-                                const originId = routeSegments[0].from_stop_id;
-                                
-                                // Process Origin Stop
+                            const originId = routeSegments[0]?.from_stop_id;
+                            if (originId) {
                                 let originDiff = tripStartMins - currentMins;
                                 if (originDiff < -720) originDiff += 1440;
                                 else if (originDiff > 720) originDiff -= 1440;
@@ -849,14 +940,16 @@
                                 if (originDiff >= originPastLimit && originDiff <= 65) {
                                     const arrH = Math.floor(tripStartMins / 60) % 24;
                                     const arrM = tripStartMins % 60;
-                                    const timeStr = `${arrH.toString().padStart(2, '0')}:${arrM.toString().padStart(2, '0')}`;
+                                    const timeStr =
+                                        `${String(arrH).padStart(2, '0')}:${String(arrM).padStart(2, '0')}`;
                                     const originStop = stopMap[originId];
-
                                     arrivals.push({
                                         route_id: route.id,
-                                        route_name: lang === 'zh' ? route.name_zh : route.name_en,
+                                        route_name: lang === 'zh' ? route.name_zh : route
+                                            .name_en,
                                         stop_id: originId,
-                                        stop_name: originStop ? (lang === 'zh' ? originStop.name_zh : originStop.name_en) : originId,
+                                        stop_name: originStop ? (lang === 'zh' ? originStop
+                                            .name_zh : originStop.name_en) : originId,
                                         arrival_time: timeStr,
                                         day_type: route.operating_day_type,
                                         order_seq: tripStartMins,
@@ -866,28 +959,26 @@
                             }
 
                             routeSegments.forEach(seg => {
-                                // Calculate arrival at this specific stop
-                                const arrivalMins = tripStartMins + Math.round(seg.expected_duration_sec / 60);
-                                
-                                // Calculate difference (handle midnight crossing logic via helper later, but raw diff here)
+                                const arrivalMins = tripStartMins + Math.round(seg
+                                    .expected_duration_sec / 60);
                                 let diff = arrivalMins - currentMins;
-                                // Handle midnight wrap-around for display filtering (e.g., current 23:50, arrival 00:10 -> diff should be +20)
                                 if (diff < -720) diff += 1440;
                                 else if (diff > 720) diff -= 1440;
 
-                                // Filter: Show buses arriving soon (up to 65 mins) or just left
                                 const pastLimit = showPastBuses ? -30 : -1;
                                 if (diff >= pastLimit && diff <= 65) {
                                     const arrH = Math.floor(arrivalMins / 60) % 24;
                                     const arrM = arrivalMins % 60;
-                                    const timeStr = `${arrH.toString().padStart(2, '0')}:${arrM.toString().padStart(2, '0')}`;
-
+                                    const timeStr =
+                                        `${String(arrH).padStart(2, '0')}:${String(arrM).padStart(2, '0')}`;
                                     const targetStop = stopMap[seg.to_stop_id];
                                     arrivals.push({
                                         route_id: route.id,
-                                        route_name: lang === 'zh' ? route.name_zh : route.name_en,
+                                        route_name: lang === 'zh' ? route.name_zh : route
+                                            .name_en,
                                         stop_id: seg.to_stop_id,
-                                        stop_name: targetStop ? (lang === 'zh' ? targetStop.name_zh : targetStop.name_en) : seg.to_stop_id,
+                                        stop_name: targetStop ? (lang === 'zh' ? targetStop
+                                            .name_zh : targetStop.name_en) : seg.to_stop_id,
                                         arrival_time: timeStr,
                                         day_type: route.operating_day_type,
                                         order_seq: arrivalMins,
@@ -898,606 +989,27 @@
                         });
                     }
                 });
-
                 return arrivals.sort((a, b) => a.order_seq - b.order_seq);
             }
         };
-        let mockTime = urlParams.get('time');
-        
-        let isStopListOpen = false, expandedTripId = null;
-        let isFirstLoad = true;
-        let fetchController = null;
-        let lastCheckedDay = new Date().getDay(); // [Fix] Midnight auto-refresh
-        let userPos = null; // [Stage 2] Store GPS
-        let lastUserPos = null; // [Perf] Distance cache invalidation sentinel
-        let refreshTimer = 0; // [Stage 3] Countdown
-        const REFRESH_INTERVAL = 30;
-        let activeRouteId = null; // Track currently opened route modal
-        let lastRenderMinute = -1; // [Fix] Track last rendered minute for auto-update
-
-        // [Fix C] Haversine Formula for accurate distance
-        function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-            const R = 6371; // Radius of the earth in km
-            const dLat = deg2rad(lat2 - lat1);
-            const dLon = deg2rad(lon2 - lon1);
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c;
-        }
-        function deg2rad(deg) { return deg * (Math.PI / 180); }
-
-        // [Fix A] Midnight-safe time difference calculator
-        function calcDiffMinutes(arrivalStr, currentTotalMinutes) {
-            const p = arrivalStr.split(':').map(Number);
-            const arrivalTotalMin = p[0] * 60 + p[1];
-            let diff = arrivalTotalMin - currentTotalMinutes;
-            
-            // Handle midnight crossover (e.g., Now 23:55, Bus 00:05 -> diff is -1430)
-            if (diff < -720) diff += 1440; // Assume next day
-            else if (diff > 720) diff -= 1440; // Assume previous day (rare)
-            
-            return diff;
-        }
-
-        const i18n = {
-            zh: {
-                serviceHours: "服務時間",
-                scheduleInfo: "班次資料",
-                operatingDays: "行駛日子",
-                weekday: '教學日', nonteaching: '非教學日', sunday: '假日/週日', arrival: '實時到站', empty: '當前時段無班次', arrived: '已抵達', soon: '即將', unit: '分', search: '搜尋車站...', next: '後續車站 (預計)', term: '終點站',
-                settings: '設定', appearance: '外觀', theme: '深色模式', lang: '語言', behavior: '行為', autoSwitch: '自動切換車站', autoSwitchDesc: '定位後自動跳轉', showPastBuses: '顯示前班車', showPastBusesDesc: '顯示過去30分鐘已離站班次', advanced: '進階', devMode: '開發模式', devModeDesc: '啟用時間模擬與測試工具', simulation: '模擬中', resetRealTime: '重置為實時', timeHint: '點擊時間或日期即可模擬該時段班次', testModeFixed: '固定', testModeFlowing: '流動'
-            },
-            en: {
-                serviceHours: "Service Hours",
-                scheduleInfo: "Schedule Info",
-                operatingDays: "Operating Days",
-                weekday: 'Teaching', nonteaching: 'Non-Teaching', sunday: 'Sun/Holiday', arrival: 'Real-time Arrivals', empty: 'No service at this time', arrived: 'Arrived', soon: 'Soon', unit: 'min', search: 'Search stops...', next: 'Trip Timeline', term: 'Terminus',
-                settings: 'Settings', appearance: 'Appearance', theme: 'Dark Mode', lang: 'Language', behavior: 'Behavior', autoSwitch: 'Auto Switch Stop', autoSwitchDesc: 'Jump to stop after locating', showPastBuses: 'Show Past Buses', showPastBusesDesc: 'Show buses departed in past 30 mins', advanced: 'Advanced', devMode: 'Dev Mode', devModeDesc: 'Enable time simulation tools', simulation: 'Simulating', resetRealTime: 'Reset to Live', timeHint: 'Tap time or day to simulate schedule', testModeFixed: 'Fixed', testModeFlowing: 'Flowing'
-            }
-        };
-
-        // ========== Settings Modal Control ==========
-        window.toggleSettings = () => {
-            const modal = document.getElementById('settings-modal');
-            const card = document.getElementById('settings-card');
-            const backdrop = document.getElementById('settings-backdrop');
-            const isHidden = modal.classList.contains('hidden');
-            
-            if (isHidden) {
-                // === 開啟動畫：backdrop fade → card spring ===
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-                updateSettingsUI();
-                
-                // Force reflow for animation
-                modal.offsetHeight;
-                
-                requestAnimationFrame(() => {
-                    // Backdrop: 0 → 1 opacity (blur 跟隨 opacity 淡入)
-                    backdrop.style.transition = 'opacity 0.3s cubic-bezier(0.32, 0.72, 0, 1)';
-                    backdrop.style.opacity = '1';
-                    
-                    // Card: 稍微延遲產生層次感
-                    setTimeout(() => {
-                        card.classList.remove('scale-95', 'opacity-0');
-                        card.classList.add('scale-100', 'opacity-100');
-                    }, 40);
-                });
-                
-                document.body.classList.add('modal-open');
-                
-            } else {
-                // === 關閉動畫：快速退出 (280ms) ===
-                // Card 先縮小，backdrop 同步淡出
-                card.style.transition = 'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s cubic-bezier(0.4, 0, 1, 1)';
-                card.classList.remove('scale-100', 'opacity-100');
-                card.classList.add('scale-95', 'opacity-0');
-                
-                // Backdrop 同時開始淡出（blur 會跟著 opacity 消失）
-                backdrop.style.transition = 'opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1)'
-                backdrop.style.opacity = '0';
-                
-                document.body.classList.remove('modal-open');
-                
-                // 280ms 後清理 DOM
-                setTimeout(() => {
-                    modal.classList.remove('flex');
-                    modal.classList.add('hidden');
-                    // 重置狀態
-                    card.style.transition = '';
-                    backdrop.style.transition = '';
-                }, 280);
-            }
-        };
-
-        window.updateSettingsUI = () => {
-            // 1. Update Texts for Current Language (delegates to updateI18n to avoid duplication)
-            updateI18n();
-
-            // 2. Theme Toggle
-            const themeBtn = document.getElementById('theme-toggle-btn');
-            const themeKnob = document.getElementById('theme-toggle-knob');
-            if (themeBtn && themeKnob) {
-                if (isDark) {
-                    themeBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-apple-accent';
-                    themeKnob.style.transform = 'translateX(20px)';
-                } else {
-                    themeBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-slate-300';
-                    themeKnob.style.transform = 'translateX(0)';
-                }
-            }
-
-            // 3. Language Toggle
-            const langBtn = document.getElementById('lang-toggle-btn');
-            const langKnob = document.getElementById('lang-toggle-knob');
-            const langLabel = document.getElementById('lang-label');
-            if (langBtn && langKnob) {
-                if (lang === 'en') {
-                    langBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-apple-accent';
-                    langKnob.style.transform = 'translateX(20px)';
-                    if (langLabel) langLabel.textContent = 'English';
-                } else {
-                    langBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-slate-300';
-                    langKnob.style.transform = 'translateX(0)';
-                    if (langLabel) langLabel.textContent = '繁體中文';
-                }
-            }
-
-            // 4. Auto Switch Toggle
-            const autoBtn = document.getElementById('auto-switch-btn');
-            const autoKnob = document.getElementById('auto-switch-knob');
-            if (autoBtn && autoKnob) {
-                if (autoSwitchStop) {
-                    autoBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-apple-accent';
-                    autoKnob.style.transform = 'translateX(20px)';
-                } else {
-                    autoBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-slate-300';
-                    autoKnob.style.transform = 'translateX(0)';
-                }
-            }
-
-            // 4b. Show Past Buses Toggle (Settings modal)
-            const pastBtn = document.getElementById('past-buses-btn');
-            const pastKnob = document.getElementById('past-buses-knob');
-            if (pastBtn && pastKnob) {
-                if (showPastBuses) {
-                    pastBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-apple-accent';
-                    pastKnob.style.transform = 'translateX(20px)';
-                } else {
-                    pastBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-slate-300';
-                    pastKnob.style.transform = 'translateX(0)';
-                }
-            }
-
-            // 4c. Quick Past Buses icon (header shortcut)
-            const quickBtn = document.getElementById('past-buses-quick-btn');
-            if (quickBtn) {
-                quickBtn.style.opacity = showPastBuses ? '1' : '0.28';
-                quickBtn.title = showPastBuses
-                    ? (lang === 'zh' ? '隱藏前班車' : 'Hide Past Buses')
-                    : (lang === 'zh' ? '顯示前班車' : 'Show Past Buses');
-            }
-
-            // 5. Dev Mode Toggle
-            const devBtn = document.getElementById('dev-mode-btn');
-            const devKnob = document.getElementById('dev-mode-knob');
-            const devPanel = document.getElementById('test-time-panel');
-            
-            if (devBtn && devKnob) {
-                if (isDevMode) {
-                    devBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-apple-accent';
-                    devKnob.style.transform = 'translateX(20px)';
-                    devPanel.classList.remove('hidden');
-                } else {
-                    devBtn.className = 'relative w-[51px] h-[31px] rounded-full transition-colors duration-300 bg-slate-300';
-                    devKnob.style.transform = 'translateX(0)';
-                    devPanel.classList.add('hidden');
-                }
-            }
-
-            // 6. Test Time UI State
-            if (isDevMode) {
-                const days = ['日', '一', '二', '三', '四', '五', '六'];
-                const daysEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                const currentDayIdx = testDay !== null ? testDay : new Date().getDay();
-                
-                // Render Day Picker
-                const dayContainer = document.getElementById('day-picker-container');
-                if (dayContainer) {
-                    // Use grid-cols-7 to auto fit
-                    dayContainer.innerHTML = [0,1,2,3,4,5,6].map(d => {
-                        const isSelected = d === currentDayIdx;
-                        // Removed min-w-[44px], added w-full to ensure fit
-                        return `<button onclick="setTestDay(${d})" class="w-full h-[32px] rounded-[7px] text-[12px] font-semibold transition-all flex items-center justify-center ${isSelected ? 'bg-white dark:bg-slate-600 text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}">${lang === 'zh' ? days[d] : daysEn[d]}</button>`;
-                    }).join('');
-                }
-
-                // Update Time Display
-                const timeDisplay = document.getElementById('time-display');
-                if (timeDisplay) {
-                    timeDisplay.textContent = testTime || '--:--';
-                    if (testTime) timeDisplay.classList.add('text-apple-accent');
-                    else timeDisplay.classList.remove('text-apple-accent');
-                }
-
-                // Update Fixed/Flowing segmented control
-                const fixedBtn = document.getElementById('test-mode-fixed-btn');
-                const flowBtn  = document.getElementById('test-mode-flow-btn');
-                if (fixedBtn && flowBtn) {
-                    const activeClass  = 'bg-white dark:bg-slate-600 text-black dark:text-white shadow-sm';
-                    const inactiveClass = 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300';
-                    if (isTestTimeFixed) {
-                        fixedBtn.className = `flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1 ${activeClass}`;
-                        flowBtn.className  = `flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1 ${inactiveClass}`;
-                    } else {
-                        flowBtn.className  = `flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1 ${activeClass}`;
-                        fixedBtn.className = `flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1 ${inactiveClass}`;
-                    }
-                }
-            }
-        };
-
-        // Update all elements with data-i18n attribute
-        window.updateI18n = () => {
-            document.querySelectorAll('[data-i18n]').forEach(el => {
-                const key = el.getAttribute('data-i18n');
-                if (i18n[lang] && i18n[lang][key]) {
-                    el.textContent = i18n[lang][key];
-                }
-            });
-        };
-
-        window.toggleAutoSwitch = () => {
-            autoSwitchStop = !autoSwitchStop;
-            saveSettings();
-            updateSettingsUI();
-        };
-
-        window.toggleShowPastBuses = () => {
-            showPastBuses = !showPastBuses;
-            saveSettings();
-            updateSettingsUI();
-            // Directly recalculate arrivals with new window, then re-render (no full loadData needed)
-            if (db.routes.length > 0) {
-                db.arrivals = ScheduleEngine.getArrivals(getNow());
-                processAndRender();
-            }
-        }
-
-        window.toggleDevMode = () => {
-            isDevMode = !isDevMode;
-            // If turning off, clear any active test settings
-            if (!isDevMode && (testTime || testDay !== null)) {
-                clearTestTime();
-            }
-            saveSettings();
-            updateSettingsUI();
-        };
-
-        window.handleTimeChange = (val) => {
-            if (!val) return;
-            testTime = val;
-            // Default to today if no day selected
-            if (testDay === null) testDay = new Date().getDay();
-            
-            applyTestSettings();
-        };
-
-        window.setTestDay = (dayIndex) => {
-            testDay = dayIndex;
-            // Default to now if no time selected
-            if (!testTime) {
-                const now = new Date();
-                testTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-            }
-            applyTestSettings();
-        };
-
-        function applyTestSettings() {
-            // Record anchor for flowing mode
-            testTimeSetAt = Date.now();
-
-            // Update URL param
-            const url = new URL(window.location);
-            if (testTime) url.searchParams.set('time', testTime);
-            window.history.replaceState({}, '', url);
-            
-            saveSettings();
-            updateSettingsUI(); // Refresh UI to show active state
-            loadData(); // Trigger data reload
-            
-            if (navigator.vibrate) navigator.vibrate(10);
-        }
-
-        // applyTestTime() removed — superseded by handleTimeChange() + setTestDay()
-
-        window.clearTestTime = () => {
-            testTime = null;
-            testDay = null;
-            testTimeSetAt = null;
-            
-            // Clear URL param
-            const url = new URL(window.location);
-            url.searchParams.delete('time');
-            window.history.replaceState({}, '', url);
-            
-            saveSettings();
-            updateSettingsUI();
-            loadData();
-            
-            if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
-        };
-
-        window.setTestTimeMode = (fixed) => {
-            isTestTimeFixed = fixed;
-            // If switching to flowing and a time is already set, re-anchor now
-            if (!fixed && testTime) {
-                testTimeSetAt = Date.now();
-            }
-            saveSettings();
-            updateSettingsUI();
-        };
-
-        window.onload = () => {
-            // Initialize theme icon (settings modal only)
-            updateThemeIcon();
-            
-            // Initialize i18n labels
-            updateI18n();
-            
-            // Initialize clock
-            updateClock();
-            setInterval(updateClock, 1000);
-            setInterval(updateRefreshUI, 1000); // Stage 3 Ticker
-            
-            // [Fix] Render static UI immediately before data loads
-            renderModeSelector();
-            
-            // 統一由 loadData 內部控制定位時機
-            loadData();
-            
-            // 🔧 FIX: 禁止全量 re-render，改用輕量級倒數更新
-            setInterval(() => {
-                if (db.stops.length > 0) tickCountdownOnly();
-            }, 1000); // 每秒更新倒數，但唔重建 DOM
-            
-            // [Feature] Bottom Sheet Controller
-            initBottomSheet('stop-list-sheet', 'stop-list-handle', () => toggleStopList(false));
-            // 對於 Route Modal，頂部區域作為 Handle
-            initBottomSheet('route-modal-card', 'route-modal-card', () => closeRouteModal());
-
-            // [Fix Resize Lock] Handle window resize to unlock scroll
-            window.addEventListener('resize', () => {
-                if (window.innerWidth >= 768 && isStopListOpen) {
-                    toggleStopList(); // Close mobile menu if switching to desktop
-                }
-            });
-        };
-
-        function getNow() {
-            // Priority: testTime > urlParams.time > real time
-            const timeSource = testTime || mockTime;
-            
-            if (!timeSource) return new Date();
-            
-            const [h, m] = timeSource.split(':');
-            const d = new Date();
-            
-            // If testDay is set, adjust the date to match that day
-            if (testDay !== null) {
-                const currentDay = d.getDay();
-                const dayDiff = testDay - currentDay;
-                d.setDate(d.getDate() + dayDiff);
-            }
-            
-            d.setHours(parseInt(h), parseInt(m), 0, 0);
-
-            // Flowing mode: advance simulated time from the anchor point
-            if (!isTestTimeFixed && testTimeSetAt) {
-                const elapsed = Date.now() - testTimeSetAt;
-                return new Date(d.getTime() + elapsed);
-            }
-
-            return d;
-        }
-
-        function saveSettings() {
-            localStorage.setItem(SETTINGS_KEY, JSON.stringify({
-                stopId: currentStopId,
-                lang,
-                isDark,
-                mode: currentMode,
-                autoSwitchStop,
-                testTime,
-                testDay,
-                isDevMode,
-                showPastBuses,
-                isTestTimeFixed
-            }));
-        }
-
-        function toggleDarkMode() {
-            isDark = !isDark;
-            document.documentElement.classList.toggle('dark', isDark);
-            updateThemeIcon();
-            saveSettings();
-        }
-        function updateThemeIcon() {
-            // Update settings modal icon if open
-            const settingsIcon = document.getElementById('settings-theme-icon');
-            if (settingsIcon) {
-                settingsIcon.innerHTML = isDark
-                    ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />'
-                    : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />';
-            }
-        }
-
-        function toggleLang() {
-            lang = (lang === 'zh') ? 'en' : 'zh';
-            
-            // Update search placeholder
-            const searchInput = document.getElementById('stop-search');
-            if (searchInput) {
-                searchInput.placeholder = i18n[lang].search;
-            }
-            
-            updateI18n(); // Update all data-i18n labels
-            renderAll();
-            saveSettings();
-            refreshRouteModalIfOpen(); // Update opened route modal immediately
-        }
-
-        function updateRefreshUI() {
-            // [Apple Style Ring] Update SVG dashoffset
-            if (refreshTimer < REFRESH_INTERVAL) {
-                refreshTimer++;
-                const ring = document.getElementById('refresh-ring');
-                if (ring) {
-                    // Ensure transition is active
-                    if (ring.style.transition === 'none') {
-                        ring.style.transition = 'stroke-dashoffset 1s linear';
-                    }
-                    // Calculate offset: 100 (empty) -> 0 (full)
-                    const pct = Math.min((refreshTimer / REFRESH_INTERVAL) * 100, 100);
-                    const offset = 100 - pct;
-                    ring.style.strokeDashoffset = offset;
-                }
-            } else {
-                // 🔧 FIX: 自動刷新時傳入 true 標記,避免重置展開狀態
-                loadData(true);
-            }
-        }
-
-        async function loadData(isAutoRefresh = false) {
-            // [Feature] Reset Timer & Ring Instantly
-            refreshTimer = 0;
-            const ring = document.getElementById('refresh-ring');
-            if (ring) {
-                ring.style.transition = 'none';
-                ring.style.strokeDashoffset = '100'; // Reset to empty
-                void ring.offsetWidth; // Force reflow
-                ring.style.transition = 'stroke-dashoffset 1s linear';
-            }
-
-            if (fetchController) fetchController.abort();
-            fetchController = new AbortController();
-            const signal = fetchController.signal;
-
-            const btn = document.getElementById('refresh-btn');
-            if (!isAutoRefresh) {
-                btn.classList.remove('animate-apple-spin');
-                void btn.offsetWidth;
-                btn.classList.add('animate-apple-spin');
-                setTimeout(() => btn.classList.remove('animate-apple-spin'), 800);
-            }
-            
-            // Initial Loading State
-            if (db.stops.length === 0) document.getElementById('bus-list').innerHTML = Array(4).fill(0).map(() => `<div class="h-14 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 animate-pulse"></div>`).join('');
-            
-            try {
-                // [Stage 1] Force fetch all 3 core JSON files
-                console.log('[BusVibe] Fetching JSON data...');
-                
-                const fetchJson = async (url) => {
-                    const res = await fetch(url, { signal });
-                    if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
-                    return res.json();
-                };
-
-                const requests = [
-                    (db.stops.length === 0) ? fetchJson('stop.json') : Promise.resolve(null),
-                    (db.routes.length === 0) ? fetchJson('route.json') : Promise.resolve(null),
-                    (db.segments.length === 0) ? fetchJson('route_segment.json') : Promise.resolve(null)
-                ];
-
-                const [stopRes, routeRes, segRes] = await Promise.all(requests);
-
-                if (stopRes) db.stops = stopRes;
-                if (routeRes) db.routes = routeRes;
-                if (segRes) {
-                    db.segments = segRes;
-                    // [Perf] Pre-build sorted lookup: { routeId: Segment[] }
-                    db.segmentsByRoute = segRes.reduce((map, s) => {
-                        if (!map[s.route_id]) map[s.route_id] = [];
-                        map[s.route_id].push(s);
-                        return map;
-                    }, {});
-                    Object.values(db.segmentsByRoute).forEach(segs =>
-                        segs.sort((a, b) => a.expected_duration_sec - b.expected_duration_sec)
-                    );
-                }
-
-                // Validate Data Integrity
-                if (!Array.isArray(db.stops) || !Array.isArray(db.routes)) {
-                    throw new Error('Invalid JSON format: stops or routes is not an array');
-                }
-
-                // [Stage 1] Real-time Calculation
-                db.route_times = ScheduleEngine.initRouteTimes();
-                // Safety: Ensure ScheduleEngine returns array even if no data
-                db.arrivals = ScheduleEngine.getArrivals(getNow()) || [];
-                
-                console.log(`[BusVibe] Loaded: Stops(${db.stops.length}), Routes(${db.routes.length}), Arrivals(${db.arrivals.length})`);
-
-                // [Fix] Ensure currentStopId is set if empty
-                if (!currentStopId && db.stops.length > 0) {
-                    currentStopId = db.stops[0].id;
-                }
-                
-                // Update UI labels immediately (safe even if currentStopId is null)
-                updateStopLabels();
-
-                // [Location Flow] Attempt GPS on first load
-                if (isFirstLoad) {
-                    findNearestStop(true);
-                }
-
-                if (!isFirstLoad && !isAutoRefresh && navigator.vibrate) navigator.vibrate(10);
-                
-                // [Fix] Always render fully on first valid data load
-                if (isFirstLoad) {
-                    isFirstLoad = false;
-                    renderAll(true);
-                } else {
-                    // 🔧 FIX: 避免重新渲染導致 timeline 滾動位置重置
-                    // 僅更新倒數計時,不重建整個 DOM
-                    tickCountdownOnly();
-                }
-            } catch (e) {
-                if (e.name !== 'AbortError') {
-                    console.error('[BusVibe] Data Load Error:', e);
-                    document.getElementById('bus-list').innerHTML = `<div class="p-4 text-center text-red-500 bg-red-50 rounded-lg text-xs">數據加載失敗<br>${e.message}</div>`;
-                }
-            }
-        }
-
-        // [Fix] fullRebuild defaults to true to maintain old behavior for manual interactions
-        function renderAll(fullRebuild = true) {
-            renderModeSelector();
-            // Only rebuild the stop grid DOM if requested (avoids resetting scroll/input focus)
-            if (fullRebuild) renderStopGrid();
-            processAndRender();
-            updateStopLabels();
-        }
-
-        function updateStopLabels() {
-            const stop = db.stops.find(s => s.id === currentStopId);
-            const name = stop ? (lang === 'zh' ? stop.name_zh : stop.name_en) : '---';
-            document.getElementById('mobile-current-stop').innerText = name;
-            document.getElementById('selected-stop-name').innerText = name;
-            document.getElementById('arrival-title').innerText = i18n[lang].arrival;
-        }
 
         function renderModeSelector() {
-            // [Stage 2] Added nonteaching mode
             const modes = ['weekday', 'nonteaching', 'sunday'];
-            document.getElementById('mode-selector').innerHTML = modes.map(m => `
-                <button onclick="changeMode('${m}')" class="flex-1 py-1.5 text-[10px] sm:text-[12px] font-semibold rounded-[9px] transition-all duration-300 ${currentMode === m ? 'bg-white dark:bg-[#3A3A3C] text-black dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'}">
-                    ${i18n[lang][m]}
+            const container = document.getElementById('mode-selector');
+            if (!container) return;
+            container.innerHTML = modes.map(m => `
+                <button onclick="changeMode('${m}')" class="flex-1 py-1.5 text-[10px] sm:text-[12px] font-semibold rounded-[9px] transition-all duration-300 ${currentMode === m ? 'bg-white dark:bg-[#3A3A3C] text-black dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'}" role="tab" aria-selected="${currentMode === m}">
+                    ${t(m)}
                 </button>
             `).join('');
+        }
+
+        function debouncedRenderStopGrid() {
+            if (renderStopGridTimer) clearTimeout(renderStopGridTimer);
+            renderStopGridTimer = setTimeout(() => {
+                renderStopGrid();
+                renderStopGridTimer = null;
+            }, 120);
         }
 
         function renderStopGrid() {
@@ -1507,11 +1019,8 @@
 
             const now = getNow();
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-            // [Safety] Handle empty arrivals gracefully
             const safeArrivals = db.arrivals || [];
 
-            // Stage 4: Map routes to stops for better search
             const stopRoutesMap = {};
             safeArrivals.forEach(arr => {
                 if (!stopRoutesMap[arr.stop_id]) stopRoutesMap[arr.stop_id] = new Set();
@@ -1522,292 +1031,84 @@
             safeArrivals.forEach(arr => {
                 const dt = arr.day_type || "";
                 let isMatch = false;
-                if (currentMode === 'weekday') {
-                    isMatch = dt.includes('MON') || dt === 'N' || dt === '';
-                } else if (currentMode === 'nonteaching') {
-                    isMatch = dt.includes('MON') && !dt.includes('TEACHING');
-                } else if (currentMode === 'sunday') {
-                    isMatch = dt.includes('SUN') || dt.includes('HOLIDAY') || dt === 'N';
-                }
+                if (currentMode === 'weekday') isMatch = dt.includes('MON') || dt === 'N' || dt === '';
+                else if (currentMode === 'nonteaching') isMatch = dt.includes('MON') && !dt.includes('TEACHING');
+                else if (currentMode === 'sunday') isMatch = dt.includes('SUN') || dt.includes('HOLIDAY') || dt ===
+                    'N';
                 if (!isMatch) return;
-
-                // [Fix A] Use helper
                 const diff = calcDiffMinutes(arr.arrival_time, currentMinutes);
-
                 if (diff >= -1 && diff <= 60) {
                     busCounts[arr.stop_id] = (busCounts[arr.stop_id] || 0) + 1;
                 }
             });
 
-            // Stage 2 & 4: Enhanced Filter & Sort
             let filteredStops = db.stops.filter(s => {
-                const nameMatch = s.name_zh.toLowerCase().includes(query) || s.name_en.toLowerCase().includes(query);
-                const routeMatch = stopRoutesMap[s.id] && Array.from(stopRoutesMap[s.id]).some(r => r.includes(query));
+                const nameMatch = s.name_zh.toLowerCase().includes(query) || s.name_en.toLowerCase().includes(
+                    query);
+                const routeMatch = stopRoutesMap[s.id] && [...stopRoutesMap[s.id]].some(r => r.includes(query));
                 return nameMatch || routeMatch;
             });
 
-            // Stage 2: Distance Calculation & Sorting
-            // [Perf] Only recompute when GPS position actually changes
-            const posChanged = userPos && (
-                !lastUserPos ||
-                lastUserPos.lat !== userPos.lat ||
-                lastUserPos.lng !== userPos.lng
-            );
+            const posChanged = userPos && (!lastUserPos || lastUserPos.lat !== userPos.lat || lastUserPos.lng !== userPos
+                .lng);
             if (posChanged) {
                 lastUserPos = { lat: userPos.lat, lng: userPos.lng };
                 db.stops.forEach(s => {
-                    const sLong = (s.lng !== undefined) ? s.lng : s.long;
-                    s._cachedDist = (s.lat && sLong)
-                        ? getDistanceFromLatLonInKm(userPos.lat, userPos.lng, s.lat, sLong)
-                        : null;
+                    const sLng = (s.lng !== undefined) ? s.lng : s.long;
+                    s._cachedDist = (s.lat && sLng) ? getDistanceFromLatLonInKm(userPos.lat, userPos.lng, s.lat,
+                        sLng) : null;
                 });
             }
             filteredStops = filteredStops.map(s => ({ ...s, distance: userPos ? (s._cachedDist ?? null) : null }));
 
-            // [Enhanced Sorting] 優先排有車的站，其次按距離排
             filteredStops.sort((a, b) => {
                 const countA = busCounts[a.id] || 0;
                 const countB = busCounts[b.id] || 0;
-                
-                // 1. 是否有車 (Boolean 權重)
                 const hasBusA = countA > 0 ? 1 : 0;
                 const hasBusB = countB > 0 ? 1 : 0;
-                
-                if (hasBusA !== hasBusB) {
-                    return hasBusB - hasBusA; // 有車的 (1) 排在沒車的 (0) 前面
-                }
-                
-                // 2. 距離排序 (如果有車/沒車狀態相同)
+                if (hasBusA !== hasBusB) return hasBusB - hasBusA;
                 const distA = a.distance !== null ? a.distance : 9999;
                 const distB = b.distance !== null ? b.distance : 9999;
-                
                 return distA - distB;
             });
-            
+
             if (filteredStops.length === 0 && query !== "") {
-                container.innerHTML = `<div class="py-8 text-center text-slate-400 text-xs">${lang === 'zh' ? '找不到相關車站' : 'No stops found'}</div>`;
+                container.innerHTML =
+                    `<div class="py-8 text-center text-slate-400 text-xs">${t('noStopsFound')}</div>`;
                 return;
             }
 
             container.innerHTML = filteredStops.map(stop => {
                 const count = busCounts[stop.id] || 0;
                 const isSelected = currentStopId === stop.id;
-                
-                // Apple Style Badge 樣式
-                let badgeClass = count > 0
-                    ? (isSelected ? 'bg-white/30 text-white' : 'bg-apple-accent/10 text-apple-accent dark:bg-apple-accent/20')
-                    : 'opacity-20 grayscale';
-
-                // 使用 Apple SF Style 的距離顯示：更小、更淡、具備單位自動轉換
-                const distLabel = stop.distance
-                    ? `<span class="text-[10px] font-semibold opacity-50 tracking-tight">${stop.distance < 1 ? Math.round(stop.distance * 1000) + ' m' : stop.distance.toFixed(1) + ' km'}</span>`
-                    : '';
-
                 const hasBuses = count > 0;
+                let badgeClass = count > 0 ?
+                    (isSelected ? 'bg-white/30 text-white' :
+                        'bg-apple-accent/10 text-apple-accent dark:bg-apple-accent/20') :
+                    'opacity-20 grayscale';
+                const distLabel = stop.distance ?
+                    `<span class="text-[10px] font-semibold opacity-50 tracking-tight">${stop.distance < 1 ? Math.round(stop.distance * 1000) + ' m' : stop.distance.toFixed(1) + ' km'}</span>` :
+                    '';
                 return `
-                <button onclick="setStop('${stop.id}', true)" class="w-full px-5 py-3 rounded-[16px] text-[15px] font-semibold text-left transition-all flex items-center justify-between group ${isSelected ? 'bg-apple-accent text-white shadow-lg scale-[1.02]' : (hasBuses ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-600')} hover:bg-black/[0.04] dark:hover:bg-white/[0.06] mb-1">
+                <button onclick="setStop('${stop.id}', true)" class="w-full px-5 py-3 rounded-[16px] text-[15px] font-semibold text-left transition-all flex items-center justify-between group ${isSelected ? 'bg-apple-accent text-white shadow-lg scale-[1.02]' : (hasBuses ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-600')} hover:bg-black/[0.04] dark:hover:bg-white/[0.06] mb-1" role="option" aria-selected="${isSelected}">
                     <div class="flex flex-col truncate pr-2">
                         <span class="truncate leading-tight">${lang === 'zh' ? stop.name_zh : stop.name_en}</span>
                         <div class="mt-0.5">${distLabel}</div>
                     </div>
-                    <span class="shrink-0 font-mono text-[10px] px-2 py-0.5 rounded-full transition-colors ${badgeClass}">
-                        ${count}
-                    </span>
-                </button>
-                `;
+                    <span class="shrink-0 font-mono text-[10px] px-2 py-0.5 rounded-full transition-colors ${badgeClass}">${count}</span>
+                </button>`;
             }).join('');
         }
 
-        window.toggleStopList = (forceState) => {
-            isStopListOpen = (typeof forceState === 'boolean') ? forceState : !isStopListOpen;
-            const container = document.getElementById('stop-list-container');
-            const chevron = document.getElementById('stop-chevron');
-            
-            if (isStopListOpen) {
-                // Open: Remove hidden first, then add visible class after a tick to trigger transition
-                container.classList.remove('hidden');
-                requestAnimationFrame(() => container.classList.add('visible'));
-                document.body.classList.add('modal-open'); // Better scroll lock
-            } else {
-                container.classList.remove('visible');
-                document.body.classList.remove('modal-open');
-                setTimeout(() => {
-                    if (!isStopListOpen) container.classList.add('hidden');
-                }, 300); // Match CSS duration
-            }
-            if (chevron) chevron.classList.toggle('rotate-180', isStopListOpen);
-        };
-
-        // [Fix] Added 'fromUserAction' param. If false (auto-gps), don't toggle menu
-        window.setStop = (id, fromUserAction = true) => {
-            if (currentStopId === id && !isFirstLoad) {
-                // 車站沒變也要重新渲染 Grid，因為可能 userPos 剛更新需要顯示距離
-                renderStopGrid();
-                if (window.innerWidth < 768 && fromUserAction) toggleStopList(false);
-                return;
-            }
-            
-            currentStopId = id;
-            if (window.innerWidth < 768 && fromUserAction) toggleStopList(false);
-            
-            expandedTripId = null;
-            renderAll();
-            saveSettings();
-        };
-
-        // [Feature] Toggle GPS animation on both Mobile (Dot) and Desktop (Btn)
-        function updateLocatingStatus(isLocating) {
-            const btn = document.getElementById('gps-btn');
-            const mobileDot = document.getElementById('mobile-status-dot');
-            
-            if (isLocating) {
-                if (btn) {
-                    btn.classList.add('animate-spin');
-                    btn.disabled = true;
-                }
-                if (mobileDot) {
-                    mobileDot.classList.add('locating-spinner');
-                }
-            } else {
-                if (btn) {
-                    btn.classList.remove('animate-spin');
-                    btn.disabled = false;
-                }
-                if (mobileDot) {
-                    mobileDot.classList.remove('locating-spinner');
-                }
-            }
-        }
-
-        // [Feature] Dual-stage Positioning: Fast then Accurate
-        window.findNearestStop = (silent = false) => {
-            if (db.stops.length === 0) return;
-            if (!navigator.geolocation) {
-                if (!silent) alert(lang === 'zh' ? "不支援定位" : "No GPS support");
-                return;
-            }
-
-            // Start Animation
-            updateLocatingStatus(true);
-
-            let isFinal = false; // 標記是否已獲得高精度結果
-
-            const handleCoords = (position, isHighRes) => {
-                if (isFinal && !isHighRes) return; // 如果已有高精度，忽略隨後回傳的低精度
-                if (isHighRes) isFinal = true;
-
-                const { latitude, longitude } = position.coords;
-                userPos = { lat: latitude, lng: longitude };
-                
-                let minDistance = Infinity;
-                let nearestId = null;
-
-                db.stops.forEach(stop => {
-                    const stopLong = stop.long || stop.lng;
-                    if (stop.lat && stopLong) {
-                        const d = getDistanceFromLatLonInKm(latitude, longitude, stop.lat, stopLong);
-                        if (d < minDistance) {
-                            minDistance = d;
-                            nearestId = stop.id;
-                        }
-                    }
-                });
-
-                if (nearestId) {
-                    const isNewStop = currentStopId !== nearestId;
-                    
-                    // NEW: Respect autoSwitchStop setting
-                    if (autoSwitchStop) {
-                        currentStopId = nearestId;
-                    }
-
-                    // [Apple Style]
-                    // 1. 更新資料與 UI（即使不切換車站，也要更新距離資訊）
-                    // 2. 震動回饋
-                    renderAll(true);
-
-                    if (!silent) {
-                        if (window.innerWidth < 768 && !silent && autoSwitchStop) {
-                            toggleStopList(false);
-                        }
-                    }
-
-                    if (isHighRes && navigator.vibrate && autoSwitchStop) navigator.vibrate(50);
-                }
-
-                // 如果這是高精度結果，則結束動畫
-                if (isHighRes) {
-                    isFinal = true;
-                    updateLocatingStatus(false);
-                }
-            };
-
-            // 第一階段：快速定位 (低精度, 3秒超時)
-            navigator.geolocation.getCurrentPosition(
-                (pos) => { if (!isFinal) handleCoords(pos, false); },
-                e => console.log('Low res GPS fail', e),
-                { timeout: 3000, maximumAge: 60000, enableHighAccuracy: false }
-            );
-
-            // 第二階段：精確定位 (高精度, 15秒超時)
-            navigator.geolocation.getCurrentPosition(
-                (pos) => handleCoords(pos, true),
-                (err) => {
-                    console.warn('High res GPS fail', err);
-                    // 只有在完全失敗且沒有低精度結果時才報錯
-                    if (!isFinal) {
-                        if (!silent) alert(lang === 'zh' ? "無法獲取精確位置" : "GPS Error");
-                        updateLocatingStatus(false);
-                    }
-                },
-                { timeout: 10000, maximumAge: 0, enableHighAccuracy: true }
-            );
-        };
-
-        window.changeMode = (m) => { currentMode = m; expandedTripId = null; renderAll(); saveSettings(); };
-
-        // [Refactor] scrollTimelineToCurrentStop removed in favor of native scrollIntoView in toggleTripDetails
-
-        window.toggleTripDetails = (id) => {
-            const wasExpanded = expandedTripId === id;
-            expandedTripId = wasExpanded ? null : id;
-            processAndRender();
-            
-            if (!wasExpanded) {
-                // Use double RAF to ensure layout paint is complete before scrolling
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        // ID Format: timeline-node-{RouteID}-{Time}-{StopID}
-                        // This ID is set on the *Current* node in renderTimeline
-                        const targetEl = document.getElementById(`current-node-${id}`);
-                        
-                        if (targetEl) {
-                            // block: 'center' fits the user request for "盡量置中"
-                            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                    });
-                });
-                
-                if (navigator.vibrate) navigator.vibrate(10); // Haptic feedback
-            }
-        };
-
-        function formatTime(t) { return t.split(':').slice(0, 2).join(':'); }
-
         function renderTimeline(bus) {
             if (!db.segments || db.segments.length === 0) return '';
-
-            // 1. Logic: Get ordered segments
             const steps = db.segments
                 .filter(t => t.route_id === bus.route_id)
                 .sort((a, b) => a.expected_duration_sec - b.expected_duration_sec);
-            
             if (steps.length === 0) return '';
 
-            // 2. Logic: Build linear stops
             let timelineStops = [];
             const addedSet = new Set();
-            
             if (steps[0].from_stop_id) {
                 timelineStops.push({ stopId: steps[0].from_stop_id, seconds: 0 });
                 addedSet.add(steps[0].from_stop_id);
@@ -1819,10 +1120,9 @@
                 }
             });
 
-            // 3. Logic: Determine Current Index & Time Base
             const currentIndex = timelineStops.findIndex(s => s.stopId === bus.stop_id);
             if (currentIndex === -1) return '';
-            
+
             const currentStopData = timelineStops[currentIndex];
             const baseSeconds = currentStopData.seconds;
             const baseDate = getNow();
@@ -1830,56 +1130,48 @@
             const arrivalDate = new Date(baseDate);
             arrivalDate.setHours(h, m, 0, 0);
 
-            // 4. Render: Apple Style Visuals
             const timelineHTML = timelineStops.map((point, index) => {
                 const sObj = db.stops.find(x => x.id === point.stopId);
                 const stopName = sObj ? (lang === 'zh' ? sObj.name_zh : sObj.name_en) : point.stopId;
-                
                 const diffSec = point.seconds - baseSeconds;
                 const pointDate = new Date(arrivalDate.getTime() + diffSec * 1000);
-                const timeStr = pointDate.toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit', hour12: false });
+                const timeStr = pointDate.toLocaleTimeString('zh-HK', { hour: '2-digit', minute: '2-digit',
+                    hour12: false });
 
-                // States
                 let state = 'future';
                 if (index < currentIndex) state = 'past';
                 else if (index === currentIndex) state = 'current';
 
-                // Visual Configurations
-                let rowClass = "flex items-center gap-4 relative py-3 min-h-[44px]"; // Touch target friendly
-                let dotHTML = "";
-                let textClass = "";
-                let timeClass = "";
-                let uniqueId = "";
+                let rowClass = "flex items-center gap-4 relative py-3 min-h-[44px]";
+                let dotHTML = "",
+                    textClass = "",
+                    timeClass = "",
+                    uniqueId = "";
 
                 if (state === 'past') {
-                    // Past: Faded, small dot (No strikethrough)
-                    dotHTML = `<div class="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 z-10"></div>`;
-                    textClass = "text-[13px] font-medium text-slate-400 dark:text-slate-500 opacity-60";
-                    timeClass = "text-[11px] font-mono text-slate-300 dark:text-slate-600 opacity-60";
+                    dotHTML =
+                        `<div class="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 z-10"></div>`;
+                    textClass =
+                        "text-[13px] font-medium text-slate-400 dark:text-slate-500 opacity-60";
+                    timeClass =
+                        "text-[11px] font-mono text-slate-300 dark:text-slate-600 opacity-60";
                 } else if (state === 'current') {
-                    // Current: Apple Maps "Puck"
-                    // Route-Stop-Time format to match toggleTripDetails
                     const tripId = `${bus.route_id}-${bus.stop_id}-${bus.arrival_time}`;
                     uniqueId = `id="current-node-${tripId}"`;
-                    
                     dotHTML = `<div class="apple-puck z-10"></div>`;
                     textClass = "text-[15px] font-bold text-slate-900 dark:text-white";
-                    timeClass = "text-[12px] font-mono font-bold text-apple-accent bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded";
+                    timeClass =
+                        "text-[12px] font-mono font-bold text-apple-accent bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded";
                 } else {
-                    // Future: Hollow ring or white dot with border
-                    dotHTML = `<div class="w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-800 border-[2px] border-slate-300 dark:border-slate-500 z-10"></div>`;
+                    dotHTML =
+                        `<div class="w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-800 border-[2px] border-slate-300 dark:border-slate-500 z-10"></div>`;
                     textClass = "text-[13px] font-medium text-slate-700 dark:text-slate-300";
                     timeClass = "text-[11px] font-mono text-slate-500 dark:text-slate-400";
                 }
 
                 return `
                     <div class="${rowClass} group" ${uniqueId}>
-                        <!-- Centered Dot Container (Width 14px to match Puck) -->
-                        <div class="w-[14px] flex justify-center shrink-0">
-                            ${dotHTML}
-                        </div>
-                        
-                        <!-- Content -->
+                        <div class="w-[14px] flex justify-center shrink-0">${dotHTML}</div>
                         <div class="flex-1 flex justify-between items-baseline pr-2">
                             <span class="${textClass} transition-colors leading-snug">${stopName}</span>
                             <span class="${timeClass} tabular-nums tracking-tight ml-3">${timeStr}</span>
@@ -1889,180 +1181,92 @@
 
             return `
                 <div class="mt-4 relative">
-                    <!-- The Continuous Line (Spine) -->
-                    <!-- Positioned relative to the padding of the container to align with dots -->
                     <div class="absolute top-0 bottom-0 left-[26px] w-[2px] bg-slate-100 dark:bg-slate-800/50 rounded-full"></div>
-                    
-                    <!-- Scroll Container with Gradient Mask -->
                     <div class="timeline-scroll-container max-h-[240px] overflow-y-auto px-5 py-2 timeline-mask space-y-0 relative">
-                        <!-- Progress Line (Blue) for past ? No, keep it simple grey for cleanliness -->
                         ${timelineHTML}
                     </div>
                 </div>`;
         }
 
-        // 🆕 FIX: 輕量級倒數更新 — 只改文字，唔重建 DOM
-        function tickCountdownOnly() {
-          const now = getNow();
-          const currentMinutes = now.getHours() * 60 + now.getMinutes();
-          
-          // 1️⃣ 更新所有到站卡片嘅倒數 (假設卡片有 data-arrival-time attribute)
-          document.querySelectorAll('[data-arrival-time]').forEach(card => {
-            const arrivalTime = card.getAttribute('data-arrival-time');
-            const diff = calcDiffMinutes(arrivalTime, currentMinutes);
-            
-            // 更新倒數數字 (必須有對應元素)
-            const diffEl = card.querySelector('.countdown-value');
-            const labelEl = card.querySelector('.countdown-label');
-            
-            if (!diffEl || !labelEl) return;
-            
-            // Past bus: show minutes-ago (never flip to "已抵達")
-            if (card.getAttribute('data-is-past') === 'true') {
-              diffEl.textContent = Math.abs(diff);
-              labelEl.textContent = lang === 'zh' ? '分鐘前' : 'min ago';
-              card.classList.remove('text-emerald-600', 'text-rose-600');
-              card.classList.add('text-slate-400');
-            } else if (diff <= 0) {
-              diffEl.textContent = '--';
-              labelEl.textContent = i18n[lang].arrived;
-              card.classList.remove('text-emerald-600', 'text-rose-600');
-              card.classList.add('text-slate-400');
-            } else if (diff <= 5) {
-              diffEl.textContent = diff;
-              labelEl.textContent = i18n[lang].soon;
-              card.classList.remove('text-emerald-600', 'text-slate-400');
-              card.classList.add('text-rose-600');
-            } else {
-              diffEl.textContent = diff;
-              labelEl.textContent = i18n[lang].unit;
-              card.classList.remove('text-rose-600', 'text-slate-400');
-              card.classList.add('text-emerald-600');
-            }
-          });
-          
-          // 2️⃣ 判斷是否需要 full render
-          const tickPastLimit = showPastBuses ? -30 : -1;
-          
-          // [Fix] 當分鐘數改變時，強制 re-render（新班次進入65分鐘視窗）
-          const minuteChanged = currentMinutes !== lastRenderMinute;
-
-          const hasOutOfRangeCard = Array.from(document.querySelectorAll('[data-arrival-time]')).some(card => {
-            const arrivalTime = card.getAttribute('data-arrival-time');
-            const diff = calcDiffMinutes(arrivalTime, currentMinutes);
-            return diff < tickPastLimit || diff > 65;
-          });
-
-          const needsFullRender = minuteChanged || hasOutOfRangeCard;
-
-          if (needsFullRender) {
-            lastRenderMinute = currentMinutes;
-            processAndRender(); // 只在必要時重建
-          }
-        }
-
         function processAndRender() {
             const listDiv = document.getElementById('bus-list');
-            // [Fix] Robust check
             if (!currentStopId || db.stops.length === 0) {
-                console.warn('Skipping render: No stop selected or data empty');
+                if (db.stops.length === 0 && listDiv) {
+                    listDiv.innerHTML =
+                        `<div class="col-span-full py-12 text-center text-slate-400 text-xs font-medium">${t('loading')}</div>`;
+                }
                 return;
-            }
-            
-            // [Debug] Check if we have arrivals
-            const relevantArrivals = db.arrivals.filter(a => a.stop_id === currentStopId);
-            if (relevantArrivals.length === 0 && db.arrivals.length > 0) {
-                console.log(`No arrivals for stop ${currentStopId} (Total: ${db.arrivals.length})`);
             }
 
             const now = getNow();
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
-            // [Fix] Use reduce+spread to avoid mutating db.arrivals objects
-            let filtered = db.arrivals.reduce((acc, arr) => {
+
+            const filtered = db.arrivals.reduce((acc, arr) => {
                 if (arr.stop_id !== currentStopId) return acc;
                 const dt = arr.day_type || "";
                 let isMatch = false;
-                if (currentMode === 'weekday') {
-                    isMatch = dt.includes('MON') || dt === 'N' || dt === '';
-                } else if (currentMode === 'nonteaching') {
-                    isMatch = dt.includes('MON') && !dt.includes('TEACHING');
-                } else if (currentMode === 'sunday') {
-                    isMatch = dt.includes('SUN') || dt.includes('HOLIDAY') || dt === 'N';
-                }
+                if (currentMode === 'weekday') isMatch = dt.includes('MON') || dt === 'N' || dt === '';
+                else if (currentMode === 'nonteaching') isMatch = dt.includes('MON') && !dt.includes('TEACHING');
+                else if (currentMode === 'sunday') isMatch = dt.includes('SUN') || dt.includes('HOLIDAY') || dt ===
+                    'N';
                 if (!isMatch) return acc;
                 const diff = calcDiffMinutes(arr.arrival_time, currentMinutes);
-                const renderPastLimit = showPastBuses ? -30 : -1;
-                if (diff >= renderPastLimit && diff <= 65) acc.push({ ...arr, diff });
+                const pastLimit = showPastBuses ? -30 : -1;
+                if (diff >= pastLimit && diff <= 65) acc.push({ ...arr, diff });
                 return acc;
             }, []).sort((a, b) => a.diff - b.diff);
 
-            // ✅ FIX CONFIRMED: Ghost Scroll 已移除 renderStopGrid()
-            // 僅在以下情況更新站點列表:
-            //  1. 搜尋輸入 (renderStopGrid via oninput)
-            //  2. 切換模式 (renderAll)
-            //  3. 首次載入 (renderAll with fullRebuild=true)
-            // 🔒 禁止在 processAndRender 內觸發,避免重置滾動位置
-
             if (filtered.length === 0) {
-                listDiv.innerHTML = `<div class="py-12 text-center text-slate-400 text-xs font-medium border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg">${i18n[lang].empty}</div>`;
+                listDiv.innerHTML =
+                    `<div class="col-span-full py-12 text-center text-slate-400 text-xs font-medium border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">${t('empty')}</div>`;
                 return;
             }
 
-            // [UX Fix] 1. Snapshot: Save Scroll Position before destroying DOM
             let savedScrollTop = 0;
-            let savedCardScrollTop = 0;
-            
             if (expandedTripId) {
-                // Save timeline scroll position
                 const activeContainer = listDiv.querySelector('.timeline-scroll-container');
                 if (activeContainer) savedScrollTop = activeContainer.scrollTop;
-                
-                // Also save the parent card's position relative to viewport (if needed)
-                const activeCard = listDiv.querySelector(`[data-arrival-time]`);
-                if (activeCard) {
-                    savedCardScrollTop = activeCard.offsetTop;
-                }
             }
 
-            // 2. Render: Rebuild HTML
             listDiv.innerHTML = filtered.map(bus => {
                 const routeMatch = bus.route_name.match(/^[0-9A-Z]+/i);
                 const routeDisp = routeMatch ? routeMatch[0] : bus.route_name.split(' ')[0];
                 const tripId = `${bus.route_id}-${bus.stop_id}-${bus.arrival_time}`;
                 const isExpanded = expandedTripId === tripId;
-                
-                let statusCls = 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/30';
-                let timeLabel = i18n[lang].unit, displayDiff = bus.diff;
 
-                // Past buses (departed > 1 min ago)
+                let statusCls =
+                    'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/30';
+                let timeLabel = t('unit'),
+                    displayDiff = bus.diff;
+
                 if (bus.isPast && bus.diff < -1) {
-                    statusCls = 'text-slate-400 bg-slate-100 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/50';
-                    timeLabel = lang === 'zh' ? '分鐘前' : 'min ago'; displayDiff = Math.abs(bus.diff);
+                    statusCls =
+                        'text-slate-400 bg-slate-100 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/50';
+                    timeLabel = lang === 'zh' ? '分鐘前' : 'min ago';
+                    displayDiff = Math.abs(bus.diff);
                 } else if (bus.diff <= 0) {
-                    // Fix Logic Sync: <= 0 is Arrived
-                    statusCls = 'text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700';
-                    timeLabel = i18n[lang].arrived; displayDiff = '--';
+                    statusCls =
+                        'text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700';
+                    timeLabel = t('arrived');
+                    displayDiff = '--';
                 } else if (bus.diff <= 5) {
-                    statusCls = 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-800/30 font-bold';
-                    timeLabel = i18n[lang].soon;
+                    statusCls =
+                        'text-rose-600 bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-800/30 font-bold';
+                    timeLabel = t('soon');
                 }
 
                 const isPastCard = bus.isPast && bus.diff < -1;
                 const pastCardCls = isPastCard ? 'opacity-50' : '';
                 return `
-                <!-- 🔧 FIX: 加入 data-arrival-time 屬性 -->
                 <div data-arrival-time="${bus.arrival_time}" data-is-past="${isPastCard}" onclick="toggleTripDetails('${tripId}')" class="apple-card rounded-[24px] px-5 py-5 cursor-pointer active:scale-[0.98] ${isExpanded ? 'ring-2 ring-apple-accent/20 border-apple-accent/30' : ''} ${pastCardCls}">
                     <div class="flex justify-between items-center">
                         <div class="flex items-center gap-4">
-                            <div onclick="openRouteDetails('${bus.route_id}', event)" class="w-12 h-12 shrink-0 bg-black dark:bg-white rounded-[14px] flex items-center justify-center text-white dark:text-black font-black text-sm shadow-apple hover:scale-110 active:scale-90 transition-transform z-10 relative">
-                                ${routeDisp}
-                            </div>
+                            <div onclick="openRouteDetails('${bus.route_id}', event)" class="w-12 h-12 shrink-0 bg-black dark:bg-white rounded-[14px] flex items-center justify-center text-white dark:text-black font-black text-sm shadow-apple hover:scale-110 active:scale-90 transition-transform z-10 relative" role="button" tabindex="0" aria-label="路線 ${routeDisp} 詳情">${routeDisp}</div>
                             <div class="flex flex-col">
                                 <span class="text-[19px] font-extrabold tracking-tight text-slate-900 dark:text-white leading-none">${formatTime(bus.arrival_time)}</span>
                             </div>
                         </div>
-                        <!-- 🔧 FIX: 倒數區加 class，方便 tickCountdownOnly 更新 -->
-                        <div class="px-4 py-2 rounded-[16px] ${statusCls.replace('border-indigo-100', 'border-transparent')} text-center min-w-[70px]">
+                        <div class="px-4 py-2 rounded-[16px] ${statusCls} text-center min-w-[70px]">
                             <div class="countdown-value text-lg font-black leading-none">${displayDiff}</div>
                             <div class="countdown-label text-[9px] font-bold uppercase mt-1 opacity-70">${timeLabel}</div>
                         </div>
@@ -2071,150 +1275,535 @@
                 </div>`;
             }).join('');
 
-            // [UX Fix] 3. Restore: Apply saved scroll position to new DOM
             if (expandedTripId && savedScrollTop > 0) {
-                // Use requestAnimationFrame to ensure DOM is fully painted
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
                         const newContainer = listDiv.querySelector('.timeline-scroll-container');
                         if (newContainer) {
                             newContainer.scrollTop = savedScrollTop;
-                            // Ensure smooth scroll behavior is disabled during restore
                             newContainer.style.scrollBehavior = 'auto';
-                            // Re-enable smooth scroll after restore
-                            setTimeout(() => {
-                                newContainer.style.scrollBehavior = 'smooth';
-                            }, 50);
+                            setTimeout(() => { newContainer.style.scrollBehavior = 'smooth'; }, 50);
                         }
                     });
                 });
             }
         }
 
-        function updateClock() {
-            const now = getNow();
-            
-            // [Fix] Midnight auto-refresh logic
-            const currentDay = now.getDay();
-            if (currentDay !== lastCheckedDay) {
-                lastCheckedDay = currentDay;
-                // [Stage 2] Support nonteaching mode
-                const newMode = (currentDay === 0) ? 'sunday' : 'weekday';
-                if (currentMode !== newMode) {
-                    currentMode = newMode;
-                    // Force full rebuild to update stop badges and mode selector
-                    renderAll(true);
-                    saveSettings();
+        function tickCountdownOnly() {
+            if (tickScheduled) return;
+            tickScheduled = true;
+            requestAnimationFrame(() => {
+                tickScheduled = false;
+                const now = getNow();
+                const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                const tickPastLimit = showPastBuses ? -30 : -1;
+                let needsFullRender = false;
+                const minuteChanged = currentMinutes !== lastRenderMinute;
+
+                document.querySelectorAll('[data-arrival-time]').forEach(card => {
+                    const arrivalTime = card.getAttribute('data-arrival-time');
+                    const diff = calcDiffMinutes(arrivalTime, currentMinutes);
+                    const diffEl = card.querySelector('.countdown-value');
+                    const labelEl = card.querySelector('.countdown-label');
+                    if (!diffEl || !labelEl) return;
+
+                    if (card.getAttribute('data-is-past') === 'true') {
+                        diffEl.textContent = Math.abs(diff);
+                        labelEl.textContent = lang === 'zh' ? '分鐘前' : 'min ago';
+                    } else if (diff <= 0) {
+                        diffEl.textContent = '--';
+                        labelEl.textContent = t('arrived');
+                    } else if (diff <= 5) {
+                        diffEl.textContent = diff;
+                        labelEl.textContent = t('soon');
+                    } else {
+                        diffEl.textContent = diff;
+                        labelEl.textContent = t('unit');
+                    }
+
+                    if (diff < tickPastLimit || diff > 65) {
+                        needsFullRender = true;
+                    }
+                });
+
+                if (minuteChanged || needsFullRender) {
+                    lastRenderMinute = currentMinutes;
+                    processAndRender();
+                }
+            });
+        }
+
+        function renderAll(fullRebuild = true) {
+            renderModeSelector();
+            if (fullRebuild) renderStopGrid();
+            processAndRender();
+            updateStopLabels();
+        }
+
+        function loadData(isAutoRefresh = false) {
+            refreshTimer = 0;
+            const ring = document.getElementById('refresh-ring');
+            if (ring) {
+                ring.style.transition = 'none';
+                ring.style.strokeDashoffset = '100';
+                void ring.offsetWidth;
+                ring.style.transition = 'stroke-dashoffset 1s linear';
+            }
+
+            if (fetchController) fetchController.abort();
+            fetchController = new AbortController();
+            const signal = fetchController.signal;
+
+            const btn = document.getElementById('refresh-btn');
+            if (!isAutoRefresh && btn) {
+                btn.classList.remove('animate-apple-spin');
+                void btn.offsetWidth;
+                btn.classList.add('animate-apple-spin');
+                setTimeout(() => btn.classList.remove('animate-apple-spin'), 800);
+            }
+
+            if (db.stops.length === 0) {
+                const listDiv = document.getElementById('bus-list');
+                if (listDiv) {
+                    listDiv.innerHTML = Array(4).fill(0).map(() =>
+                        `<div class="h-20 rounded-2xl skeleton-pulse"></div>`
+                    ).join('');
                 }
             }
 
-            // Update Time
-            const timeStr = now.toLocaleTimeString('zh-HK', { hour12: false });
-            document.getElementById('current-time').innerText = timeStr;
-            
-            // Highlight time/date orange when testTime is active
-            const timeEl = document.getElementById('current-time');
-            const dateEl = document.getElementById('current-date');
-            if (testTime) {
-                timeEl.classList.add('text-orange-500');
-                timeEl.classList.remove('text-slate-400');
-                dateEl.classList.add('text-orange-400');
-                dateEl.classList.remove('text-slate-500');
-            } else {
-                timeEl.classList.remove('text-orange-500');
-                timeEl.classList.add('text-slate-400');
-                dateEl.classList.remove('text-orange-400');
-                dateEl.classList.add('text-slate-500');
-            }
+            const fetchJson = async (url) => {
+                const res = await fetch(url, { signal });
+                if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
+                const data = await res.json();
+                if (!Array.isArray(data)) throw new Error(`Invalid format for ${url}`);
+                return data;
+            };
 
-            // [Stage 1] Update Date (e.g. SUN 15 FEB)
-            const dateStr = now.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
-            document.getElementById('current-date').innerText = dateStr;
+            Promise.all([
+                db.stops.length === 0 ? fetchJson('stop.json') : Promise.resolve(null),
+                db.routes.length === 0 ? fetchJson('route.json') : Promise.resolve(null),
+                db.segments.length === 0 ? fetchJson('route_segment.json') : Promise.resolve(null)
+            ]).then(([stopRes, routeRes, segRes]) => {
+                if (stopRes) {
+                    db.stops = stopRes.map(s => ({ ...s, lng: s.lng ?? s.long ?? null }));
+                }
+                if (routeRes) db.routes = routeRes;
+                if (segRes) {
+                    db.segments = segRes;
+                    db.segmentsByRoute = segRes.reduce((map, s) => {
+                        if (!map[s.route_id]) map[s.route_id] = [];
+                        map[s.route_id].push(s);
+                        return map;
+                    }, {});
+                    Object.values(db.segmentsByRoute).forEach(segs =>
+                        segs.sort((a, b) => a.expected_duration_sec - b.expected_duration_sec)
+                    );
+                }
+
+                if (!Array.isArray(db.stops) || !Array.isArray(db.routes)) {
+                    throw new Error('Invalid JSON format');
+                }
+
+                db.route_times = ScheduleEngine.initRouteTimes();
+                db.arrivals = ScheduleEngine.getArrivals(getNow()) || [];
+
+                if (!currentStopId && db.stops.length > 0) {
+                    currentStopId = db.stops[0].id;
+                }
+                updateStopLabels();
+
+                if (isFirstLoad) {
+                    findNearestStop(true);
+                }
+
+                if (!isFirstLoad && !isAutoRefresh && navigator.vibrate) navigator.vibrate(10);
+
+                if (isFirstLoad) {
+                    isFirstLoad = false;
+                    renderAll(true);
+                } else {
+                    tickCountdownOnly();
+                }
+            }).catch(e => {
+                if (e.name !== 'AbortError') {
+                    console.error('[CU BUS] Data load error:', e);
+                    const listDiv = document.getElementById('bus-list');
+                    if (listDiv) {
+                        listDiv.innerHTML =
+                            `<div class="col-span-full p-6 text-center text-red-500 bg-red-50 dark:bg-red-900/20 rounded-2xl text-sm font-medium">${t('loadError')}<br><span class="text-xs opacity-70 mt-1 block">${e.message}</span><br><button onclick="loadData()" class="mt-3 px-4 py-1.5 bg-red-500 text-white text-xs rounded-full hover:bg-red-600 transition-colors">Retry</button></div>`;
+                    }
+                }
+            });
         }
 
-        // [Stage 1] Helper to generate Apple-style badges
-        const getServiceBadges = (route) => {
-            const badges = [];
-            // N = has_standing_bus (Normal/Standing) -> Blue/Standard
-            if (route.has_standing_bus === 1) {
-                badges.push(`<span class="text-[10px] font-bold px-1.5 py-0.5 bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300 rounded-[6px] border border-blue-200/50 dark:border-blue-500/30 align-middle tracking-tight shadow-sm">S</span>`);
+        function toggleStopList(forceState) {
+            isStopListOpen = (typeof forceState === 'boolean') ? forceState : !isStopListOpen;
+            const container = document.getElementById('stop-list-container');
+            const chevron = document.getElementById('stop-chevron');
+            const triggerBtn = container?.previousElementSibling;
+            if (isStopListOpen) {
+                container.classList.remove('hidden');
+                requestAnimationFrame(() => container.classList.add('visible'));
+                document.body.classList.add('modal-open');
+                if (triggerBtn) triggerBtn.setAttribute('aria-expanded', 'true');
+            } else {
+                container.classList.remove('visible');
+                document.body.classList.remove('modal-open');
+                if (triggerBtn) triggerBtn.setAttribute('aria-expanded', 'false');
+                setTimeout(() => {
+                    if (!isStopListOpen) container.classList.add('hidden');
+                }, 300);
             }
-            // NS = has_not_standing_bus (No Standing) -> Orange/Warning
+            if (chevron) chevron.classList.toggle('rotate-180', isStopListOpen);
+            container.setAttribute('aria-hidden', !isStopListOpen);
+        }
+
+        function setStop(id, fromUserAction = true) {
+            if (currentStopId === id && !isFirstLoad) {
+                renderStopGrid();
+                if (window.innerWidth < 768 && fromUserAction) toggleStopList(false);
+                return;
+            }
+            currentStopId = id;
+            if (window.innerWidth < 768 && fromUserAction) toggleStopList(false);
+            expandedTripId = null;
+            renderAll();
+            saveSettings();
+        }
+
+        function findNearestStop(silent = false) {
+            if (db.stops.length === 0) return;
+            if (!navigator.geolocation) {
+                if (!silent) alert(t('noGpsSupport'));
+                return;
+            }
+            updateLocatingStatus(true);
+            let isFinal = false;
+
+            const handleCoords = (position, isHighRes) => {
+                if (isFinal && !isHighRes) return;
+                if (isHighRes) isFinal = true;
+
+                const { latitude, longitude } = position.coords;
+                userPos = { lat: latitude, lng: longitude };
+
+                let minDistance = Infinity,
+                    nearestId = null;
+                db.stops.forEach(stop => {
+                    const sLng = stop.lng ?? stop.long;
+                    if (stop.lat && sLng) {
+                        const d = getDistanceFromLatLonInKm(latitude, longitude, stop.lat, sLng);
+                        if (d < minDistance) { minDistance = d;
+                            nearestId = stop.id; }
+                    }
+                });
+
+                if (nearestId) {
+                    if (autoSwitchStop) currentStopId = nearestId;
+                    renderAll(true);
+                    if (!silent && window.innerWidth < 768 && autoSwitchStop) toggleStopList(false);
+                    if (isHighRes && navigator.vibrate && autoSwitchStop) navigator.vibrate(50);
+                }
+                if (isHighRes) updateLocatingStatus(false);
+            };
+
+            navigator.geolocation.getCurrentPosition(
+                pos => { if (!isFinal) handleCoords(pos, false); },
+                e => console.log('Low accuracy GPS failed', e),
+                { timeout: 3000, maximumAge: 60000, enableHighAccuracy: false }
+            );
+            navigator.geolocation.getCurrentPosition(
+                pos => handleCoords(pos, true),
+                err => {
+                    console.warn('High accuracy GPS failed', err);
+                    if (!isFinal) {
+                        if (!silent) alert(t('gpsError'));
+                        updateLocatingStatus(false);
+                    }
+                },
+                { timeout: 10000, maximumAge: 0, enableHighAccuracy: true }
+            );
+        }
+
+        function changeMode(m) {
+            if (currentMode === m) return;
+            currentMode = m;
+            expandedTripId = null;
+            renderAll();
+            saveSettings();
+        }
+
+        function toggleTripDetails(id) {
+            const wasExpanded = expandedTripId === id;
+            expandedTripId = wasExpanded ? null : id;
+            processAndRender();
+            if (!wasExpanded) {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        const targetEl = document.getElementById(`current-node-${id}`);
+                        if (targetEl) targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    });
+                });
+                if (navigator.vibrate) navigator.vibrate(10);
+            }
+        }
+
+        function toggleSettings() {
+            const modal = document.getElementById('settings-modal');
+            const card = document.getElementById('settings-card');
+            const backdrop = document.getElementById('settings-backdrop');
+            const isHidden = modal.classList.contains('hidden');
+
+            if (isHidden) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                updateSettingsUI();
+                modal.offsetHeight;
+                requestAnimationFrame(() => {
+                    backdrop.style.transition = 'opacity 0.3s cubic-bezier(0.32, 0.72, 0, 1)';
+                    backdrop.style.opacity = '1';
+                    setTimeout(() => {
+                        card.classList.remove('scale-95', 'opacity-0');
+                        card.classList.add('scale-100', 'opacity-100');
+                    }, 40);
+                });
+                document.body.classList.add('modal-open');
+            } else {
+                card.style.transition =
+                    'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s cubic-bezier(0.4, 0, 1, 1)';
+                card.classList.remove('scale-100', 'opacity-100');
+                card.classList.add('scale-95', 'opacity-0');
+                backdrop.style.transition = 'opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1)';
+                backdrop.style.opacity = '0';
+                document.body.classList.remove('modal-open');
+                setTimeout(() => {
+                    modal.classList.remove('flex');
+                    modal.classList.add('hidden');
+                    card.style.transition = '';
+                    backdrop.style.transition = '';
+                }, 280);
+            }
+        }
+
+        function updateSettingsUI() {
+            updateI18n();
+            updateToggleButton('theme-toggle-btn', 'theme-toggle-knob', isDark);
+            updateToggleButton('lang-toggle-btn', 'lang-toggle-knob', lang === 'en');
+            updateToggleButton('auto-switch-btn', 'auto-switch-knob', autoSwitchStop);
+            updateToggleButton('past-buses-btn', 'past-buses-knob', showPastBuses);
+            updateToggleButton('dev-mode-btn', 'dev-mode-knob', isDevMode);
+
+            document.getElementById('lang-label').textContent = lang === 'en' ? 'English' : '繁體中文';
+
+            const devPanel = document.getElementById('test-time-panel');
+            devPanel.classList.toggle('hidden', !isDevMode);
+
+            const quickBtn = document.getElementById('past-buses-quick-btn');
+            if (quickBtn) {
+                quickBtn.style.opacity = showPastBuses ? '1' : '0.28';
+                quickBtn.title = showPastBuses ?
+                    (lang === 'zh' ? '隱藏前班車' : 'Hide Past Buses') :
+                    (lang === 'zh' ? '顯示前班車' : 'Show Past Buses');
+                quickBtn.setAttribute('aria-label', quickBtn.title);
+            }
+
+            if (isDevMode) {
+                const days = lang === 'zh' ? ['日', '一', '二', '三', '四', '五', '六'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu',
+                    'Fri', 'Sat'
+                ];
+                const currentDayIdx = testDay !== null ? testDay : new Date().getDay();
+                const dayContainer = document.getElementById('day-picker-container');
+                if (dayContainer) {
+                    dayContainer.innerHTML = [0, 1, 2, 3, 4, 5, 6].map(d =>
+                        `<button onclick="setTestDay(${d})" class="w-full h-[32px] rounded-[7px] text-[12px] font-semibold transition-all flex items-center justify-center ${d === currentDayIdx ? 'bg-white dark:bg-slate-600 text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}" aria-label="${days[d]}">${days[d]}</button>`
+                    ).join('');
+                }
+
+                const timeDisplay = document.getElementById('time-display');
+                if (timeDisplay) {
+                    timeDisplay.textContent = testTime || '--:--';
+                    timeDisplay.classList.toggle('text-apple-accent', !!testTime);
+                }
+
+                const fixedBtn = document.getElementById('test-mode-fixed-btn');
+                const flowBtn = document.getElementById('test-mode-flow-btn');
+                if (fixedBtn && flowBtn) {
+                    const activeClass =
+                        'bg-white dark:bg-slate-600 text-black dark:text-white shadow-sm';
+                    const inactiveClass =
+                    'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300';
+                    fixedBtn.className =
+                        `flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1 ${isTestTimeFixed ? activeClass : inactiveClass}`;
+                    flowBtn.className =
+                        `flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1 ${!isTestTimeFixed ? activeClass : inactiveClass}`;
+                }
+            }
+        }
+
+        function toggleDarkMode() {
+            isDark = !isDark;
+            document.documentElement.classList.toggle('dark', isDark);
+            updateThemeIcon();
+            saveSettings();
+            updateSettingsUI();
+        }
+
+        function updateThemeIcon() {
+            const icon = document.getElementById('settings-theme-icon');
+            if (icon) {
+                icon.innerHTML = isDark ?
+                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />' :
+                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />';
+            }
+        }
+
+        function toggleLang() {
+            lang = (lang === 'zh') ? 'en' : 'zh';
+            const searchInput = document.getElementById('stop-search');
+            if (searchInput) searchInput.placeholder = t('search');
+            updateI18n();
+            renderAll();
+            saveSettings();
+            updateSettingsUI();
+            refreshRouteModalIfOpen();
+        }
+
+        function toggleAutoSwitch() {
+            autoSwitchStop = !autoSwitchStop;
+            saveSettings();
+            updateSettingsUI();
+        }
+
+        function toggleShowPastBuses() {
+            showPastBuses = !showPastBuses;
+            saveSettings();
+            updateSettingsUI();
+            if (db.routes.length > 0) {
+                db.arrivals = ScheduleEngine.getArrivals(getNow());
+                processAndRender();
+            }
+        }
+
+        function toggleDevMode() {
+            isDevMode = !isDevMode;
+            if (!isDevMode && (testTime || testDay !== null)) clearTestTime();
+            saveSettings();
+            updateSettingsUI();
+        }
+
+        function handleTimeChange(val) {
+            if (!val) return;
+            testTime = val;
+            if (testDay === null) testDay = new Date().getDay();
+            applyTestSettings();
+        }
+
+        function setTestDay(dayIndex) {
+            testDay = dayIndex;
+            if (!testTime) {
+                const now = new Date();
+                testTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            }
+            applyTestSettings();
+        }
+
+        function applyTestSettings() {
+            testTimeSetAt = Date.now();
+            const url = new URL(window.location);
+            if (testTime) url.searchParams.set('time', testTime);
+            else url.searchParams.delete('time');
+            window.history.replaceState({}, '', url);
+            saveSettings();
+            updateSettingsUI();
+            loadData();
+            if (navigator.vibrate) navigator.vibrate(10);
+        }
+
+        function clearTestTime() {
+            testTime = null;
+            testDay = null;
+            testTimeSetAt = null;
+            const url = new URL(window.location);
+            url.searchParams.delete('time');
+            window.history.replaceState({}, '', url);
+            saveSettings();
+            updateSettingsUI();
+            loadData();
+            if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+        }
+
+        function setTestTimeMode(fixed) {
+            isTestTimeFixed = fixed;
+            if (!fixed && testTime) testTimeSetAt = Date.now();
+            saveSettings();
+            updateSettingsUI();
+        }
+
+        function getServiceBadges(route) {
+            const badges = [];
+            if (route.has_standing_bus === 1) {
+                badges.push(
+                    `<span class="text-[10px] font-bold px-1.5 py-0.5 bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300 rounded-[6px] border border-blue-200/50 dark:border-blue-500/30 align-middle tracking-tight shadow-sm">S</span>`
+                    );
+            }
             if (route.has_not_standing_bus === 1) {
-                badges.push(`<span class="text-[10px] font-bold px-1.5 py-0.5 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300 rounded-[6px] border border-orange-200/50 dark:border-orange-500/30 align-middle tracking-tight shadow-sm">NS</span>`);
+                badges.push(
+                    `<span class="text-[10px] font-bold px-1.5 py-0.5 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300 rounded-[6px] border border-orange-200/50 dark:border-orange-500/30 align-middle tracking-tight shadow-sm">NS</span>`
+                    );
             }
             return badges.join('');
-        };
+        }
 
-        // Populate route modal content (extracted for reuse on lang switch)
         function populateRouteModal(routeId) {
             const route = db.routes.find(r => r.id === routeId);
             if (!route) return;
 
-            // 同步卡片邏輯：提取短路由名稱 (例如 "1A")
             const routeMatch = routeId.match(/^[0-9A-Z]+/i);
             const routeDisp = routeMatch ? routeMatch[0] : routeId.split(' ')[0];
 
-            // Populate Data
             document.getElementById('modal-route-icon').innerText = routeDisp;
             document.getElementById('modal-route-name').innerText = lang === 'zh' ? route.name_zh : route.name_en;
-            
-            // [Stage 1] Inject Category & Badges
-            const categoryEl = document.getElementById('modal-route-category');
-            categoryEl.innerText = lang === 'zh' ? route.category_zh : route.category_en;
-            
-            // Badge Injection Logic: Clean up siblings (badges) but keep the category span
-            const parentDiv = categoryEl.parentElement;
-            // Remove all elements except the first one (category span)
-            while (parentDiv.children.length > 1) {
-                parentDiv.removeChild(parentDiv.lastChild);
-            }
-            
+            document.getElementById('modal-route-category').innerText = lang === 'zh' ? route.category_zh : route
+            .category_en;
+
+            const parentDiv = document.getElementById('modal-route-category').parentElement;
+            while (parentDiv.children.length > 1) parentDiv.removeChild(parentDiv.lastChild);
+
             const badgesHtml = getServiceBadges(route);
             if (badgesHtml) {
                 const badgeContainer = document.createElement('div');
-                badgeContainer.className = 'flex gap-1.5 items-center ml-1'; // Inner gap
+                badgeContainer.className = 'flex gap-1.5 items-center ml-1';
                 badgeContainer.innerHTML = badgesHtml;
                 parentDiv.appendChild(badgeContainer);
             }
-            
-            // 格式化時間顯示
-            const openTime = (route.open_time || '00:00').substring(0, 5);
-            const closeTime = (route.close_time || '23:59').substring(0, 5);
-            document.getElementById('modal-route-time').innerText = `${openTime} - ${closeTime}`;
-            
-            // 格式化班次顯示 (Safe Parse)
+
+            document.getElementById('modal-route-time').innerText =
+                `${(route.open_time || '00:00').substring(0, 5)} - ${(route.close_time || '23:59').substring(0, 5)}`;
+
             let depMins = route.departure_mins_json;
             if (typeof depMins === 'string') {
-                try { depMins = JSON.parse(depMins); } catch(e) { depMins = []; }
+                try { depMins = JSON.parse(depMins); } catch (e) { depMins = []; }
             }
             if (!Array.isArray(depMins)) depMins = [];
-            
-            // 格式:「每小時 00, 15, 30 分開出」(補零)
-            let freqText = (lang === "zh" ? "請查閱時間表" : "Check Schedule");
-
-            if (depMins.length > 0) {
-                // 將數字轉為字串並補零 (0 -> 00, 5 -> 05)
-                const formattedMins = depMins.map(m => m.toString().padStart(2, '0')).join(', ');
-                freqText = lang === "zh"
-                    ? `每小時 ${formattedMins} 分開出`
-                    : `Departs at ${formattedMins} past hour`;
-            }
-            
+            const freqText = depMins.length > 0 ?
+                (lang === 'zh' ?
+                    `每小時 ${depMins.map(m => String(m).padStart(2, '0')).join(', ')} 分開出` :
+                    `Departs at ${depMins.map(m => String(m).padStart(2, '0')).join(', ')} past hour`) :
+                (lang === 'zh' ? '請查閱時間表' : 'Check Schedule');
             document.getElementById('modal-route-freq').innerText = freqText;
-            
-            // 格式化營運日顯示
+
             const dayTypeMap = {
                 'MON_TO_SAT': lang === 'zh' ? '星期一至六' : 'Mon-Sat',
                 'MON_TO_SAT_TEACHING_ONLY': lang === 'zh' ? '星期一至六（教學日）' : 'Mon-Sat (Teaching Only)',
                 'MON_TO_FRI_TEACHING_ONLY': lang === 'zh' ? '星期一至五（教學日）' : 'Mon-Fri (Teaching Only)',
                 'SUN_AND_PUBLIC_HOLIDAY': lang === 'zh' ? '星期日及公眾假期' : 'Sun & Public Holidays'
             };
-            document.getElementById('modal-route-days').innerText = dayTypeMap[route.operating_day_type] || route.operating_day_type;
-            
+            document.getElementById('modal-route-days').innerText = dayTypeMap[route.operating_day_type] || route
+                .operating_day_type;
+
             const remarks = lang === 'zh' ? route.remarks_zh : route.remarks_en;
             const remarksContainer = document.getElementById('modal-remarks-container');
-            if (remarks) {
+            if (remarks && remarks.trim()) {
                 document.getElementById('modal-remarks').innerText = remarks;
                 remarksContainer.classList.remove('hidden');
             } else {
@@ -2222,131 +1811,148 @@
             }
         }
 
-        // [Feature] Route Details Modal Logic - Apple-grade UX
-        window.openRouteDetails = (routeId, event) => {
-            if (event) { event.stopPropagation(); event.preventDefault(); }
-            
+        function openRouteDetails(routeId, event) {
+            if (event) { event.stopPropagation();
+                event.preventDefault(); }
             const route = db.routes.find(r => r.id === routeId);
             if (!route) return;
-
-            // Haptic feedback (iOS-like)
             if (navigator.vibrate) navigator.vibrate([5, 3]);
 
-            activeRouteId = routeId; // Track opened route
+            activeRouteId = routeId;
             populateRouteModal(routeId);
 
             const modal = document.getElementById('route-modal');
-            const card = document.getElementById('route-modal-card');
-
-            // Show Animation
             modal.classList.remove('hidden');
             setTimeout(() => {
                 modal.classList.add('visible');
                 document.body.classList.add('modal-open');
             }, 10);
-        };
+        }
 
-        window.closeRouteModal = () => {
+        function closeRouteModal() {
             const modal = document.getElementById('route-modal');
-            const card = document.getElementById('route-modal-card');
-            
-            // Fade out animation
             modal.classList.remove('visible');
             document.body.classList.remove('modal-open');
-            activeRouteId = null; // Clear tracked route
-
-            // Wait for animation before hiding
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 350); // Match CSS transition duration
-            
+            activeRouteId = null;
+            setTimeout(() => modal.classList.add('hidden'), 350);
             if (navigator.vibrate) navigator.vibrate(3);
-        };
+        }
 
-        // Refresh route modal content if it's currently open (for lang switch)
         function refreshRouteModalIfOpen() {
-            if (activeRouteId) {
-                populateRouteModal(activeRouteId);
-            }
+            if (activeRouteId) populateRouteModal(activeRouteId);
         }
 
         function initBottomSheet(sheetId, handleId, closeFn) {
             const sheet = document.getElementById(sheetId);
-            const scrollContent = sheet.querySelector('.overflow-y-auto');
             if (!sheet || window.innerWidth >= 768) return;
+            const scrollContent = sheet.querySelector('.overflow-y-auto');
+            if (!scrollContent) return;
 
-            let startY = 0;
-            let currentTranslateY = 0;
-            let isDragging = false;
+            let startY = 0,
+                currentTranslateY = 0,
+                isDragging = false;
 
-            const onTouchStart = (e) => {
-                if (window.innerWidth >= 768) return;
-                startY = e.touches[0].clientY;
-            };
-
+            const onTouchStart = (e) => { startY = e.touches[0].clientY; };
             const onTouchMove = (e) => {
-                if (window.innerWidth >= 768) return;
-                
                 const touchY = e.touches[0].clientY;
-                const isAtTop = scrollContent ? scrollContent.scrollTop <= 0 : true;
+                const isAtTop = scrollContent.scrollTop <= 0;
                 let deltaY = touchY - startY;
 
-                // 核心邏輯：判斷是否該從「捲動內容」轉向「拖拽面板」
                 if (isAtTop && deltaY > 0) {
-                    // 如果是剛觸發拖拽，重新設定 startY，防止跳動
                     if (!isDragging) {
                         isDragging = true;
-                        startY = touchY; // 重置起點
+                        startY = touchY;
                         deltaY = 0;
                         sheet.classList.add('dragging');
                     }
-
-                    // 阻止原生捲動行為
                     if (e.cancelable) e.preventDefault();
-                    
-                    // 下拉位移
                     currentTranslateY = deltaY;
                     sheet.style.transform = `translateY(${currentTranslateY}px)`;
                 } else if (isDragging && deltaY <= 0) {
-                    // 如果正在拖拽但轉向往上推，且還沒推回原位
                     if (currentTranslateY > 0) {
                         if (e.cancelable) e.preventDefault();
                         currentTranslateY = Math.max(0, deltaY + currentTranslateY);
                         sheet.style.transform = `translateY(${currentTranslateY}px)`;
                     } else {
-                        // 回到原位，恢復正常捲動
                         isDragging = false;
                         sheet.classList.remove('dragging');
                         sheet.style.transform = '';
                     }
                 }
             };
-
             const onTouchEnd = (e) => {
                 if (!isDragging) return;
-                
-                const touchY = e.changedTouches[0].clientY;
-                const deltaY = touchY - startY;
-                
+                const deltaY = e.changedTouches[0].clientY - startY;
                 isDragging = false;
                 sheet.classList.remove('dragging');
-                sheet.style.transform = ''; // 交給 CSS transition 處理
-
-                // 門檻值：下滑超過 100px 則關閉
-                if (deltaY > 100) {
-                    closeFn();
-                }
+                sheet.style.transform = '';
+                if (deltaY > 100) closeFn();
             };
 
-            // 監聽整個 Sheet 的觸控，但邏輯內部判斷是否要接管
             sheet.addEventListener('touchstart', onTouchStart, { passive: true });
             sheet.addEventListener('touchmove', onTouchMove, { passive: false });
             sheet.addEventListener('touchend', onTouchEnd);
         }
 
-        // Close on Escape key
+        function updateClock() {
+            const now = getNow();
+            const currentDay = now.getDay();
+            if (currentDay !== lastCheckedDay) {
+                lastCheckedDay = currentDay;
+                const newMode = (currentDay === 0) ? 'sunday' : 'weekday';
+                if (currentMode !== newMode) {
+                    currentMode = newMode;
+                    renderAll(true);
+                    saveSettings();
+                }
+            }
+            document.getElementById('current-time').innerText = now.toLocaleTimeString('zh-HK', { hour12: false });
+            const timeEl = document.getElementById('current-time');
+            const dateEl = document.getElementById('current-date');
+            const isSimulated = !!(testTime || mockTime);
+            timeEl.classList.toggle('text-orange-500', isSimulated);
+            timeEl.classList.toggle('text-slate-400', !isSimulated);
+            dateEl.classList.toggle('text-orange-400', isSimulated);
+            dateEl.classList.toggle('text-slate-500', !isSimulated);
+            document.getElementById('current-date').innerText = now.toLocaleDateString('en-GB', { weekday: 'short',
+                day: 'numeric', month: 'short' }).toUpperCase();
+        }
+
+        function updateRefreshUI() {
+            if (refreshTimer < REFRESH_INTERVAL) {
+                refreshTimer++;
+                const ring = document.getElementById('refresh-ring');
+                if (ring) {
+                    if (ring.style.transition === 'none') ring.style.transition = 'stroke-dashoffset 1s linear';
+                    const offset = 100 - Math.min((refreshTimer / REFRESH_INTERVAL) * 100, 100);
+                    ring.style.strokeDashoffset = offset;
+                }
+            } else {
+                loadData(true);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateThemeIcon();
+            updateI18n();
+            updateClock();
+            setInterval(updateClock, 1000);
+            setInterval(updateRefreshUI, 1000);
+            renderModeSelector();
+            loadData();
+            setInterval(() => { if (db.stops.length > 0) tickCountdownOnly(); }, 1000);
+            initBottomSheet('stop-list-sheet', 'stop-list-handle', () => toggleStopList(false));
+            initBottomSheet('route-modal-card', 'route-modal-card', () => closeRouteModal());
+            window.addEventListener('resize', () => {
+                if (window.innerWidth >= 768 && isStopListOpen) toggleStopList(false);
+            });
+        });
+
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeRouteModal();
+            if (e.key === 'Escape') {
+                if (activeRouteId) closeRouteModal();
+                else if (isStopListOpen) toggleStopList(false);
+            }
         });
     </script>
 </body>

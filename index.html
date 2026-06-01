@@ -673,7 +673,7 @@
     </div>
 
     <script>
-        let db = { stops: [], arrivals: [], route_times: [], routes: [], segments: [], segmentsByRoute: {} };
+        let db = { stops: [], stopMap: {}, arrivals: [], route_times: [], routes: [], segments: [], segmentsByRoute: {} };
         const urlParams = new URLSearchParams(window.location.search);
         let mockTime = urlParams.get('time');
 
@@ -689,7 +689,6 @@
         let activeRouteId = null;
         let lastRenderMinute = -1;
         let renderStopGridTimer = null;
-        let tickScheduled = false;
 
         const i18n = {
             zh: {
@@ -891,8 +890,7 @@
                 const currentMins = nowDate.getHours() * 60 + nowDate.getMinutes();
                 const isSaturday = nowDate.getDay() === 6;
                 const arrivals = [];
-                const stopMap = {};
-                db.stops.forEach(s => stopMap[s.id] = s);
+                const stopMap = db.stopMap;
 
                 const segmentsByRoute = Object.keys(db.segmentsByRoute).length > 0 ?
                     db.segmentsByRoute :
@@ -1132,7 +1130,7 @@
             arrivalDate.setHours(h, m, 0, 0);
 
             const timelineHTML = timelineStops.map((point, index) => {
-                const sObj = db.stops.find(x => x.id === point.stopId);
+                const sObj = db.stopMap[point.stopId];
                 const stopName = sObj ? (lang === 'zh' ? sObj.name_zh : sObj.name_en) : point.stopId;
                 const diffSec = point.seconds - baseSeconds;
                 const pointDate = new Date(arrivalDate.getTime() + diffSec * 1000);
@@ -1290,48 +1288,45 @@
             }
         }
 
-        function tickCountdownOnly() {
-            if (tickScheduled) return;
-            tickScheduled = true;
-            requestAnimationFrame(() => {
-                tickScheduled = false;
-                const now = getNow();
-                const currentMinutes = now.getHours() * 60 + now.getMinutes();
-                const tickPastLimit = showPastBuses ? -30 : -1;
-                let needsFullRender = false;
-                const minuteChanged = currentMinutes !== lastRenderMinute;
+        function tickCountdownOnly(now = getNow(), currentMinutes = now.getHours() * 60 + now.getMinutes()) {
+            const tickPastLimit = showPastBuses ? -30 : -1;
+            let needsFullRender = false;
+            const minuteChanged = currentMinutes !== lastRenderMinute;
+            const busList = document.getElementById('bus-list');
+            if (!busList) return;
+            const cards = busList.querySelectorAll('[data-arrival-time]');
+            if (cards.length === 0) return;
 
-                document.querySelectorAll('[data-arrival-time]').forEach(card => {
-                    const arrivalTime = card.getAttribute('data-arrival-time');
-                    const diff = calcDiffMinutes(arrivalTime, currentMinutes);
-                    const diffEl = card.querySelector('.countdown-value');
-                    const labelEl = card.querySelector('.countdown-label');
-                    if (!diffEl || !labelEl) return;
+            cards.forEach(card => {
+                const arrivalTime = card.getAttribute('data-arrival-time');
+                const diff = calcDiffMinutes(arrivalTime, currentMinutes);
+                const diffEl = card.querySelector('.countdown-value');
+                const labelEl = card.querySelector('.countdown-label');
+                if (!diffEl || !labelEl) return;
 
-                    if (card.getAttribute('data-is-past') === 'true') {
-                        diffEl.textContent = Math.abs(diff);
-                        labelEl.textContent = t('pastMinLabel');
-                    } else if (diff <= 0) {
-                        diffEl.textContent = '--';
-                        labelEl.textContent = t('arrived');
-                    } else if (diff <= 5) {
-                        diffEl.textContent = diff;
-                        labelEl.textContent = t('soon');
-                    } else {
-                        diffEl.textContent = diff;
-                        labelEl.textContent = t('unit');
-                    }
+                if (card.getAttribute('data-is-past') === 'true') {
+                    diffEl.textContent = Math.abs(diff);
+                    labelEl.textContent = t('pastMinLabel');
+                } else if (diff <= 0) {
+                    diffEl.textContent = '--';
+                    labelEl.textContent = t('arrived');
+                } else if (diff <= 5) {
+                    diffEl.textContent = diff;
+                    labelEl.textContent = t('soon');
+                } else {
+                    diffEl.textContent = diff;
+                    labelEl.textContent = t('unit');
+                }
 
-                    if (diff < tickPastLimit || diff > 65) {
-                        needsFullRender = true;
-                    }
-                });
-
-                if (minuteChanged || needsFullRender) {
-                    lastRenderMinute = currentMinutes;
-                    processAndRender();
+                if (diff < tickPastLimit || diff > 65) {
+                    needsFullRender = true;
                 }
             });
+
+            if (minuteChanged || needsFullRender) {
+                lastRenderMinute = currentMinutes;
+                processAndRender();
+            }
         }
 
         function renderAll(fullRebuild = true) {
@@ -1387,6 +1382,8 @@
             ]).then(([stopRes, routeRes, segRes]) => {
                 if (stopRes) {
                     db.stops = stopRes.map(s => ({ ...s, lng: s.lng ?? s.long ?? null }));
+                    db.stopMap = {};
+                    db.stops.forEach(s => db.stopMap[s.id] = s);
                 }
                 if (routeRes) db.routes = routeRes;
                 if (segRes) {
@@ -1900,8 +1897,7 @@
             sheet.addEventListener('touchend', onTouchEnd);
         }
 
-        function updateClock() {
-            const now = getNow();
+        function updateClock(now = getNow()) {
             const currentDay = now.getDay();
             if (currentDay !== lastCheckedDay) {
                 lastCheckedDay = currentDay;
@@ -1942,11 +1938,15 @@
             updateThemeIcon();
             updateI18n();
             updateClock();
-            setInterval(updateClock, 1000);
-            setInterval(updateRefreshUI, 1000);
             renderModeSelector();
             loadData();
-            setInterval(() => { if (db.stops.length > 0) tickCountdownOnly(); }, 1000);
+            setInterval(() => {
+                const now = getNow();
+                const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                updateClock(now);
+                updateRefreshUI();
+                if (db.stops.length > 0) tickCountdownOnly(now, currentMinutes);
+            }, 1000);
             initBottomSheet('stop-list-sheet', 'stop-list-handle', () => toggleStopList(false));
             initBottomSheet('route-modal-card', 'route-modal-card', () => closeRouteModal());
             window.addEventListener('resize', () => {

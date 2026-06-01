@@ -453,7 +453,8 @@
                         <h2 id="arrival-title" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Arrivals</h2>
                         <span id="selected-stop-name" class="hidden md:inline-block text-[10px] font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800">---</span>
                     </div>
-                    <div>
+                    <div class="flex items-center gap-2">
+                        <span id="last-updated" class="text-[10px] font-medium text-slate-400 dark:text-slate-500 tabular-nums">—</span>
                         <button id="past-buses-quick-btn" onclick="toggleShowPastBuses()" class="w-7 h-7 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/10 transition-all active:scale-90" style="opacity:0.28" aria-label="顯示前班車" title="顯示前班車">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -689,6 +690,7 @@
         let activeRouteId = null;
         let lastRenderMinute = -1;
         let renderStopGridTimer = null;
+        let lastUpdatedAt = null;
 
         const i18n = {
             zh: {
@@ -728,7 +730,10 @@
                 noStopsFound: '找不到相關車站',
                 pastMinLabel: '分鐘前',
                 gpsError: '無法獲取精確位置',
-                noGpsSupport: '不支援定位'
+                noGpsSupport: '不支援定位',
+                updatedJustNow: '剛剛更新',
+                updatedSecondsAgo: '秒前更新',
+                updatedMinutesAgo: '分鐘前更新'
             },
             en: {
                 serviceHours: "Service Hours",
@@ -767,7 +772,10 @@
                 noStopsFound: 'No stops found',
                 pastMinLabel: 'min ago',
                 gpsError: 'GPS Error',
-                noGpsSupport: 'No GPS support'
+                noGpsSupport: 'No GPS support',
+                updatedJustNow: 'Just now',
+                updatedSecondsAgo: 's ago',
+                updatedMinutesAgo: 'm ago'
             }
         };
 
@@ -1084,7 +1092,7 @@
                 let badgeClass = count > 0 ?
                     (isSelected ? 'bg-white/30 text-white' :
                         'bg-apple-accent/10 text-apple-accent dark:bg-apple-accent/20') :
-                    'opacity-20 grayscale';
+                    'bg-slate-200/60 text-slate-400 dark:bg-slate-700/40 dark:text-slate-500';
                 const distLabel = stop.distance ?
                     `<span class="text-[10px] font-semibold opacity-50 tracking-tight">${stop.distance < 1 ? Math.round(stop.distance * 1000) + ' m' : stop.distance.toFixed(1) + ' km'}</span>` :
                     '';
@@ -1413,6 +1421,9 @@
                 if (isFirstLoad) {
                     findNearestStop(true);
                 }
+
+                lastUpdatedAt = Date.now();
+                updateLastUpdated();
 
                 if (!isFirstLoad && !isAutoRefresh && navigator.vibrate) navigator.vibrate(10);
 
@@ -1804,7 +1815,10 @@
             document.getElementById('modal-route-days').innerText = dayTypeMap[route.operating_day_type] || route
                 .operating_day_type;
 
-            const remarks = lang === 'zh' ? route.remarks_zh : route.remarks_en;
+            let remarks = lang === 'zh' ? route.remarks_zh : route.remarks_en;
+            if (!remarks || !remarks.trim()) {
+                remarks = lang === 'zh' ? route.remarks_en : route.remarks_zh;
+            }
             const remarksContainer = document.getElementById('modal-remarks-container');
             if (remarks && remarks.trim()) {
                 document.getElementById('modal-remarks').innerText = remarks;
@@ -1934,6 +1948,24 @@
             }
         }
 
+        function updateLastUpdated() {
+            const el = document.getElementById('last-updated');
+            if (!el) return;
+            if (!lastUpdatedAt) {
+                el.textContent = '—';
+                return;
+            }
+            const diff = Math.max(0, Math.floor((Date.now() - lastUpdatedAt) / 1000));
+            if (diff < 5) {
+                el.textContent = t('updatedJustNow');
+            } else if (diff < 60) {
+                el.textContent = lang === 'zh' ? `${diff} ${t('updatedSecondsAgo')}` : `${diff}${t('updatedSecondsAgo')}`;
+            } else {
+                const mins = Math.floor(diff / 60);
+                el.textContent = lang === 'zh' ? `${mins} ${t('updatedMinutesAgo')}` : `${mins}${t('updatedMinutesAgo')}`;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             updateThemeIcon();
             updateI18n();
@@ -1945,6 +1977,7 @@
                 const currentMinutes = now.getHours() * 60 + now.getMinutes();
                 updateClock(now);
                 updateRefreshUI();
+                updateLastUpdated();
                 if (db.stops.length > 0) tickCountdownOnly(now, currentMinutes);
             }, 1000);
             initBottomSheet('stop-list-sheet', 'stop-list-handle', () => toggleStopList(false));

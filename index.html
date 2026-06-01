@@ -728,7 +728,6 @@
                 loadError: '數據載入失敗',
                 noStopsFound: '找不到相關車站',
                 pastMinLabel: '分鐘前',
-                minAgoLabel: 'min ago',
                 gpsError: '無法獲取精確位置',
                 noGpsSupport: '不支援定位'
             },
@@ -768,7 +767,6 @@
                 loadError: 'Data load failed',
                 noStopsFound: 'No stops found',
                 pastMinLabel: 'min ago',
-                minAgoLabel: 'min ago',
                 gpsError: 'GPS Error',
                 noGpsSupport: 'No GPS support'
             }
@@ -910,8 +908,11 @@
                     const openMins = ScheduleEngine.timeToMins(route.open_time);
                     let closeMins = ScheduleEngine.timeToMins(route.close_time);
 
-                    if (isSaturday && ['5_cwc', '6A', '7'].includes(route.id)) {
-                        closeMins = Math.min(closeMins, ScheduleEngine.timeToMins('13:26:00'));
+                    if (isSaturday) {
+                        const saturdayCutoff = { '5_cwc': '13:26:00', '6A': '13:10:00', '7': '13:18:00' }[route.id];
+                        if (saturdayCutoff) {
+                            closeMins = Math.min(closeMins, ScheduleEngine.timeToMins(saturdayCutoff));
+                        }
                     }
 
                     let depMins = route.departure_mins_json;
@@ -1242,7 +1243,7 @@
                 if (bus.isPast && bus.diff < -1) {
                     statusCls =
                         'text-slate-400 bg-slate-100 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/50';
-                    timeLabel = lang === 'zh' ? '分鐘前' : 'min ago';
+                    timeLabel = t('pastMinLabel');
                     displayDiff = Math.abs(bus.diff);
                 } else if (bus.diff <= 0) {
                     statusCls =
@@ -1309,7 +1310,7 @@
 
                     if (card.getAttribute('data-is-past') === 'true') {
                         diffEl.textContent = Math.abs(diff);
-                        labelEl.textContent = lang === 'zh' ? '分鐘前' : 'min ago';
+                        labelEl.textContent = t('pastMinLabel');
                     } else if (diff <= 0) {
                         diffEl.textContent = '--';
                         labelEl.textContent = t('arrived');
@@ -1478,11 +1479,12 @@
                 return;
             }
             updateLocatingStatus(true);
-            let isFinal = false;
+            let gotFix = false;
 
             const handleCoords = (position, isHighRes) => {
-                if (isFinal && !isHighRes) return;
-                if (isHighRes) isFinal = true;
+                if (gotFix) return;
+                gotFix = true;
+                updateLocatingStatus(false);
 
                 const { latitude, longitude } = position.coords;
                 userPos = { lat: latitude, lng: longitude };
@@ -1504,19 +1506,19 @@
                     if (!silent && window.innerWidth < 768 && autoSwitchStop) toggleStopList(false);
                     if (isHighRes && navigator.vibrate && autoSwitchStop) navigator.vibrate(50);
                 }
-                if (isHighRes) updateLocatingStatus(false);
             };
 
             navigator.geolocation.getCurrentPosition(
-                pos => { if (!isFinal) handleCoords(pos, false); },
+                pos => handleCoords(pos, false),
                 e => console.log('Low accuracy GPS failed', e),
                 { timeout: 3000, maximumAge: 60000, enableHighAccuracy: false }
             );
             navigator.geolocation.getCurrentPosition(
                 pos => handleCoords(pos, true),
                 err => {
-                    console.warn('High accuracy GPS failed', err);
-                    if (!isFinal) {
+                    if (gotFix) {
+                        console.warn('High accuracy GPS failed', err);
+                    } else {
                         if (!silent) alert(t('gpsError'));
                         updateLocatingStatus(false);
                     }
@@ -1662,7 +1664,10 @@
             const searchInput = document.getElementById('stop-search');
             if (searchInput) searchInput.placeholder = t('search');
             updateI18n();
-            renderAll();
+            if (db.routes.length > 0) {
+                db.arrivals = ScheduleEngine.getArrivals(getNow()) || [];
+            }
+            renderAll(true);
             saveSettings();
             updateSettingsUI();
             refreshRouteModalIfOpen();
@@ -1681,6 +1686,7 @@
             if (db.routes.length > 0) {
                 db.arrivals = ScheduleEngine.getArrivals(getNow());
                 processAndRender();
+                renderStopGrid();
             }
         }
 
@@ -1914,7 +1920,7 @@
             timeEl.classList.toggle('text-slate-400', !isSimulated);
             dateEl.classList.toggle('text-orange-400', isSimulated);
             dateEl.classList.toggle('text-slate-500', !isSimulated);
-            document.getElementById('current-date').innerText = now.toLocaleDateString('en-GB', { weekday: 'short',
+            document.getElementById('current-date').innerText = now.toLocaleDateString(lang === 'zh' ? 'zh-HK' : 'en-GB', { weekday: 'short',
                 day: 'numeric', month: 'short' }).toUpperCase();
         }
 

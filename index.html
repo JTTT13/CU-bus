@@ -48,37 +48,6 @@
         if (isDark) document.documentElement.classList.add('dark');
     </script>
     <style>
-        .timeline-line {
-            position: absolute;
-            left: 15px;
-            top: 28px;
-            bottom: 0;
-            width: 2px;
-            background: #E5E5EA;
-            z-index: 0;
-        }
-        .dark .timeline-line {
-            background: #38383A;
-        }
-        .timeline-node-container:last-child .timeline-line {
-            display: none;
-        }
-
-        @keyframes apple-pulse-blue {
-            0% {
-                box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.4);
-            }
-            70% {
-                box-shadow: 0 0 0 6px rgba(0, 122, 255, 0);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(0, 122, 255, 0);
-            }
-        }
-        .current-stop-pulse {
-            animation: apple-pulse-blue 2s infinite;
-        }
-
         body {
             -webkit-tap-highlight-color: transparent;
             font-feature-settings: "cv02", "cv03", "cv04", "cv11";
@@ -88,14 +57,14 @@
         }
         .glass {
             background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
         }
         .dark .glass {
             background: rgba(29, 29, 31, 0.75);
         }
         .apple-card {
-            @apply bg-white/70 dark:bg-apple-dark/60 border border-white/20 dark:border-white/5 shadow-apple transition-all duration-300 ease-in-out;
+            @apply bg-white/70 dark:bg-apple-dark/60 border border-white/20 dark:border-white/5 shadow-apple transition-[background-color,border-color,box-shadow] duration-300 ease-in-out;
         }
         .custom-scrollbar::-webkit-scrollbar {
             width: 4px;
@@ -149,8 +118,8 @@
         #route-modal.visible {
             opacity: 1;
             visibility: visible;
-            backdrop-filter: blur(24px) saturate(200%);
-            -webkit-backdrop-filter: blur(24px) saturate(200%);
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
         }
         body.modal-open {
             overflow: hidden;
@@ -212,11 +181,12 @@
         }
 
         .info-pill {
-            @apply bg-white/60 dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.08] rounded-2xl p-4 flex flex-col gap-1.5 shadow-sm hover:shadow-md transition-all duration-200;
+            @apply bg-white/60 dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.08] rounded-2xl p-4 flex flex-col gap-1.5 shadow-sm hover:shadow-md transition-[box-shadow,transform] duration-200;
             height: auto;
             min-height: min-content;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            will-change: transform;
         }
         .info-pill:active {
             transform: scale(0.985);
@@ -282,24 +252,6 @@
             background: transparent;
         }
 
-        @keyframes pulse-ring {
-            0% {
-                transform: scale(0.8);
-                box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.7);
-            }
-            70% {
-                transform: scale(1);
-                box-shadow: 0 0 0 6px rgba(0, 122, 255, 0);
-            }
-            100% {
-                transform: scale(0.8);
-                box-shadow: 0 0 0 0 rgba(0, 122, 255, 0);
-            }
-        }
-        .timeline-pulse {
-            animation: pulse-ring 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
-        }
-
         .locating-spinner {
             background: transparent !important;
             border: 2px solid rgba(0, 122, 255, 0.3);
@@ -312,8 +264,8 @@
         }
 
         #settings-backdrop {
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
             transition: opacity 0.25s cubic-bezier(0.32, 0.72, 0, 1);
             will-change: opacity;
         }
@@ -340,19 +292,6 @@
         .dark .apple-puck {
             border-color: #1C1C1E;
             box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.25);
-        }
-
-        .timeline-spine {
-            position: absolute;
-            left: 27px;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background-color: #E5E5EA;
-            z-index: 0;
-        }
-        .dark .timeline-spine {
-            background-color: #38383A;
         }
 
         .skeleton-pulse {
@@ -389,7 +328,7 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <button onclick="toggleSettings()" class="w-9 h-9 flex items-center justify-center hover:bg-black/[0.05] dark:hover:bg-white/[0.1] rounded-full transition-all active:scale-90" aria-label="設定">
+                <button onclick="toggleSettings()" class="w-9 h-9 flex items-center justify-center hover:bg-black/[0.05] dark:hover:bg-white/[0.1] rounded-full transition-[background-color,transform] active:scale-90" aria-label="設定">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-[18px] w-[18px] text-slate-700 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -399,9 +338,9 @@
                 <div class="relative w-9 h-9 flex items-center justify-center">
                     <svg class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none transform scale-110" viewBox="0 0 36 36" aria-hidden="true">
                         <path class="text-black/5 dark:text-white/5" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" />
-                        <path id="refresh-ring" class="text-apple-accent transition-all duration-1000 ease-linear" stroke-dasharray="100, 100" stroke-dashoffset="100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+                        <path id="refresh-ring" class="text-apple-accent transition-[stroke-dashoffset] duration-1000 ease-linear" stroke-dasharray="100, 100" stroke-dashoffset="100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
                     </svg>
-                    <button onclick="loadData()" id="refresh-btn" class="w-full h-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-700 dark:text-slate-300 rounded-full transition-all active:scale-90 flex items-center justify-center z-10" aria-label="重新整理">
+                    <button onclick="loadData()" id="refresh-btn" class="w-full h-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-700 dark:text-slate-300 rounded-full transition-[background-color,transform] active:scale-90 flex items-center justify-center z-10" aria-label="重新整理">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
@@ -415,11 +354,11 @@
         <div class="flex flex-col md:flex-row gap-4 lg:gap-6">
             <aside class="w-full md:w-80 shrink-0">
                 <div class="sticky-panel space-y-6">
-                    <div id="mode-selector" class="flex p-1 bg-black/[0.05] dark:bg-white/[0.1] rounded-[12px] backdrop-blur-md" role="tablist" aria-label="Schedule mode"></div>
+                    <div id="mode-selector" class="flex p-1 bg-black/[0.05] dark:bg-white/[0.1] rounded-[12px] backdrop-blur-sm" role="tablist" aria-label="Schedule mode"></div>
                     <div class="apple-card rounded-[24px] overflow-hidden">
                         <button onclick="toggleStopList()" class="w-full py-4 px-5 flex items-center justify-between md:hidden transition-colors" aria-expanded="false" aria-controls="stop-list-container">
                             <div class="flex items-center gap-3">
-                                <div id="mobile-status-dot" class="w-2 h-2 rounded-full bg-apple-accent shadow-[0_0_8px_rgba(0,122,255,0.5)] transition-all"></div>
+                                <div id="mobile-status-dot" class="w-2 h-2 rounded-full bg-apple-accent shadow-[0_0_8px_rgba(0,122,255,0.5)] transition-[background-color,box-shadow,border-color,opacity]"></div>
                                 <span id="mobile-current-stop" class="font-semibold text-sm text-slate-900 dark:text-white">Select Stop</span>
                             </div>
                             <svg id="stop-chevron" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>
@@ -432,8 +371,8 @@
                                     <div class="apple-grabber"></div>
                                 </div>
                                 <div class="px-4 pb-3 border-b border-black/[0.05] dark:border-white/[0.05] flex gap-2 shrink-0 md:pt-4 md:px-4">
-                                    <input type="text" id="stop-search" oninput="debouncedRenderStopGrid()" placeholder="Search..." class="flex-1 h-10 bg-white dark:bg-[#2C2C2E] text-[15px] px-4 rounded-[10px] outline-none placeholder-gray-400 dark:placeholder-gray-500 shadow-sm md:bg-black/[0.03] md:dark:bg-white/[0.05] md:h-auto md:text-[13px] md:py-2 md:rounded-[12px] md:shadow-none focus:ring-2 ring-apple-accent/50 transition-all" aria-label="搜尋車站">
-                                    <button id="gps-btn" onclick="findNearestStop()" class="w-10 h-10 shrink-0 bg-apple-accent text-white rounded-[10px] hover:bg-apple-accent/90 active:scale-95 transition-all shadow-sm flex items-center justify-center disabled:opacity-50 md:w-auto md:h-auto md:p-2 md:rounded-[12px]" title="Find nearest stop" aria-label="定位最近車站">
+                                    <input type="text" id="stop-search" oninput="debouncedRenderStopGrid()" placeholder="搜尋車站..." class="flex-1 h-10 bg-white dark:bg-[#2C2C2E] text-[15px] px-4 rounded-[10px] outline-none placeholder-gray-400 dark:placeholder-gray-500 shadow-sm md:bg-black/[0.03] md:dark:bg-white/[0.05] md:h-auto md:text-[13px] md:py-2 md:rounded-[12px] md:shadow-none focus:ring-2 ring-apple-accent/50 transition-[background-color,box-shadow]" aria-label="搜尋車站">
+                                    <button id="gps-btn" onclick="findNearestStop()" class="w-10 h-10 shrink-0 bg-apple-accent text-white rounded-[10px] hover:bg-apple-accent/90 active:scale-95 transition-[background-color,transform,opacity] shadow-sm flex items-center justify-center disabled:opacity-50 md:w-auto md:h-auto md:p-2 md:rounded-[12px]" title="Find nearest stop" aria-label="定位最近車站">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -455,7 +394,7 @@
                     </div>
                     <div class="flex items-center gap-2">
                         <span id="last-updated" class="text-[10px] font-medium text-slate-400 dark:text-slate-500 tabular-nums">—</span>
-                        <button id="past-buses-quick-btn" onclick="toggleShowPastBuses()" class="w-7 h-7 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/10 transition-all active:scale-90" style="opacity:0.28" aria-label="顯示前班車" title="顯示前班車">
+                        <button id="past-buses-quick-btn" onclick="toggleShowPastBuses()" class="w-7 h-7 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/10 transition-[background-color,opacity,transform] active:scale-90" style="opacity:0.28" aria-label="顯示前班車" title="顯示前班車">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
@@ -470,11 +409,11 @@
     <!-- Settings Modal -->
     <div id="settings-modal" class="fixed inset-0 z-[110] hidden items-center justify-center" role="dialog" aria-modal="true" aria-label="設定面板">
         <div id="settings-backdrop" class="absolute inset-0 bg-black/40 dark:bg-black/60 opacity-0" onclick="toggleSettings()"></div>
-        <div id="settings-card" class="relative bg-[#F2F2F7] dark:bg-[#1C1C1E] rounded-[28px] shadow-2xl w-[90vw] max-w-[420px] overflow-hidden border border-black/5 dark:border-white/10 transform scale-95 opacity-0 transition-all duration-500">
+            <div id="settings-card" class="relative bg-[#F2F2F7] dark:bg-[#1C1C1E] rounded-[28px] shadow-2xl w-[90vw] max-w-[420px] overflow-hidden border border-black/5 dark:border-white/10 transform scale-95 opacity-0 transition-[transform,opacity] duration-500">
             <div class="px-6 pt-6 pb-4 border-b border-black/5 dark:border-white/5">
                 <div class="flex items-center justify-between">
                     <h2 class="text-[22px] font-extrabold tracking-tight text-slate-900 dark:text-white" data-i18n="settings">設定</h2>
-                    <button onclick="toggleSettings()" class="w-9 h-9 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 rounded-full flex items-center justify-center transition-all active:scale-90" aria-label="關閉設定">
+                    <button onclick="toggleSettings()" class="w-9 h-9 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 rounded-full flex items-center justify-center transition-[background-color,transform] active:scale-90" aria-label="關閉設定">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -563,7 +502,7 @@
                             <div class="absolute top-[2px] left-[2px] w-[27px] h-[27px] bg-white rounded-full shadow-md transition-transform duration-300" id="dev-mode-knob"></div>
                         </button>
                     </div>
-                    <div id="test-time-panel" class="hidden overflow-hidden transition-all duration-300">
+                    <div id="test-time-panel" class="hidden overflow-hidden transition-[opacity] duration-300">
                         <div class="bg-white dark:bg-[#2C2C2E] rounded-[16px] overflow-hidden">
                             <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-700/50 flex justify-between items-center bg-slate-50/50 dark:bg-white/5">
                                 <div class="flex items-center gap-2">
@@ -574,10 +513,10 @@
                             </div>
                             <div class="p-4 space-y-4">
                                 <div id="test-mode-selector" class="flex p-1 bg-slate-100 dark:bg-black/20 rounded-[10px]">
-                                    <button onclick="setTestTimeMode(true)" id="test-mode-fixed-btn" class="flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1">
+                                        <button onclick="setTestTimeMode(true)" id="test-mode-fixed-btn" class="flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-[background-color,color,box-shadow] duration-200 flex items-center justify-center gap-1">
                                         <span>📌</span><span data-i18n="testModeFixed">固定</span>
                                     </button>
-                                    <button onclick="setTestTimeMode(false)" id="test-mode-flow-btn" class="flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1">
+                                        <button onclick="setTestTimeMode(false)" id="test-mode-flow-btn" class="flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-[background-color,color,box-shadow] duration-200 flex items-center justify-center gap-1">
                                         <span>▶️</span><span data-i18n="testModeFlowing">流動</span>
                                     </button>
                                 </div>
@@ -611,14 +550,14 @@
     <!-- Route Modal -->
     <div id="route-modal" class="fixed inset-0 z-[90] hidden items-center justify-center" role="dialog" aria-modal="true" aria-label="路線詳情">
         <div class="absolute inset-0 bg-white/10 dark:bg-black/20 transition-opacity" onclick="closeRouteModal()"></div>
-        <div id="route-modal-card" class="relative bg-[#F2F2F7]/95 dark:bg-[#1C1C1E]/95 backdrop-blur-2xl shadow-2xl overflow-hidden flex flex-col border border-white/20 dark:border-white/5">
+        <div id="route-modal-card" class="relative bg-[#F2F2F7]/95 dark:bg-[#1C1C1E]/95 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col border border-white/20 dark:border-white/5">
             <div class="h-8 w-full flex items-center justify-center md:hidden shrink-0 cursor-grab active:cursor-grabbing" onclick="closeRouteModal()">
-                <div class="w-9 h-1.5 bg-black/[0.15] dark:bg-white/[0.2] rounded-full transition-all duration-200 active:scale-x-75"></div>
+                <div class="w-9 h-1.5 bg-black/[0.15] dark:bg-white/[0.2] rounded-full transition-[background-color,transform] duration-200 active:scale-x-75"></div>
             </div>
             <div class="px-6 md:px-8 pt-5 md:pt-6 pb-4 md:pb-5 shrink-0 border-b border-black/[0.06] dark:border-white/[0.06]">
                 <div class="flex items-start justify-between gap-4">
                     <div class="flex gap-4 items-start flex-1 min-w-0">
-                        <div id="modal-route-icon" class="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-black to-gray-800 dark:from-white dark:to-gray-200 rounded-[18px] flex items-center justify-center text-white dark:text-black font-black text-xl md:text-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 shrink-0"></div>
+                        <div id="modal-route-icon" class="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-black to-gray-800 dark:from-white dark:to-gray-200 rounded-[18px] flex items-center justify-center text-white dark:text-black font-black text-xl md:text-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-[box-shadow,transform] duration-300 shrink-0"></div>
                         <div class="flex-1 min-w-0 pt-0.5">
                             <h3 id="modal-route-name" class="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight mb-2 truncate"></h3>
                             <div class="flex items-center gap-2 flex-wrap">
@@ -626,7 +565,7 @@
                             </div>
                         </div>
                     </div>
-                    <button onclick="closeRouteModal()" class="hidden md:flex w-9 h-9 bg-black/[0.06] dark:bg-white/[0.08] hover:bg-black/[0.12] dark:hover:bg-white/[0.15] rounded-full items-center justify-center transition-all duration-200 active:scale-90 shrink-0" aria-label="關閉路線詳情">
+                    <button onclick="closeRouteModal()" class="hidden md:flex w-9 h-9 bg-black/[0.06] dark:bg-white/[0.08] hover:bg-black/[0.12] dark:hover:bg-white/[0.15] rounded-full items-center justify-center transition-[background-color,transform] duration-200 active:scale-90 shrink-0" aria-label="關閉路線詳情">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5 text-slate-700 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -691,6 +630,11 @@
         let lastRenderMinute = -1;
         let renderStopGridTimer = null;
         let lastUpdatedAt = null;
+        const cardStates = new Map();
+        const stopGridStates = new Map();
+        let lastUpdatedTextCache = null;
+        let cachedDateKey = null;
+        let cachedDateString = null;
 
         const i18n = {
             zh: {
@@ -727,6 +671,7 @@
                 testModeFlowing: '流動',
                 loading: '載入中...',
                 loadError: '數據載入失敗',
+                retry: '重試',
                 noStopsFound: '找不到相關車站',
                 pastMinLabel: '分鐘前',
                 gpsError: '無法獲取精確位置',
@@ -769,6 +714,7 @@
                 testModeFlowing: 'Flowing',
                 loading: 'Loading...',
                 loadError: 'Data load failed',
+                retry: 'Retry',
                 noStopsFound: 'No stops found',
                 pastMinLabel: 'min ago',
                 gpsError: 'GPS Error',
@@ -780,6 +726,7 @@
         };
 
         function t(key) { return i18n[lang]?.[key] || key; }
+        const ariaRouteDetails = (id) => lang === 'zh' ? `路線 ${id} 詳情` : `Route ${id} details`;
 
         function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
             const R = 6371;
@@ -835,8 +782,6 @@
                 console.warn('[CU BUS] Failed to save settings:', e);
             }
         }
-
-        function formatTime(t) { return t.split(':').slice(0, 2).join(':'); }
 
         function updateToggleButton(btnId, knobId, isActive) {
             const btn = document.getElementById(btnId);
@@ -1005,7 +950,7 @@
             const container = document.getElementById('mode-selector');
             if (!container) return;
             container.innerHTML = modes.map(m => `
-                <button onclick="changeMode('${m}')" class="flex-1 py-1.5 text-[10px] sm:text-[12px] font-semibold rounded-[9px] transition-all duration-300 ${currentMode === m ? 'bg-white dark:bg-[#3A3A3C] text-black dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'}" role="tab" aria-selected="${currentMode === m}">
+                <button onclick="changeMode('${m}')" class="flex-1 py-1.5 text-[10px] sm:text-[12px] font-semibold rounded-[9px] transition-[background-color,color,box-shadow] duration-300 ${currentMode === m ? 'bg-white dark:bg-[#3A3A3C] text-black dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'}" role="tab" aria-selected="${currentMode === m}">
                     ${t(m)}
                 </button>
             `).join('');
@@ -1082,29 +1027,100 @@
             if (filteredStops.length === 0 && query !== "") {
                 container.innerHTML =
                     `<div class="py-8 text-center text-slate-400 text-xs">${t('noStopsFound')}</div>`;
+                stopGridStates.clear();
                 return;
             }
 
-            container.innerHTML = filteredStops.map(stop => {
+            const newKeys = new Set();
+            const frag = document.createDocumentFragment();
+            filteredStops.forEach(stop => {
+                newKeys.add(stop.id);
                 const count = busCounts[stop.id] || 0;
                 const isSelected = currentStopId === stop.id;
                 const hasBuses = count > 0;
-                let badgeClass = count > 0 ?
+                const badgeClass = count > 0 ?
                     (isSelected ? 'bg-white/30 text-white' :
                         'bg-apple-accent/10 text-apple-accent dark:bg-apple-accent/20') :
                     'bg-slate-200/60 text-slate-400 dark:bg-slate-700/40 dark:text-slate-500';
                 const distLabel = stop.distance ?
                     `<span class="text-[10px] font-semibold opacity-50 tracking-tight">${stop.distance < 1 ? Math.round(stop.distance * 1000) + ' m' : stop.distance.toFixed(1) + ' km'}</span>` :
                     '';
-                return `
-                <button onclick="setStop('${stop.id}', true)" class="w-full px-5 py-3 rounded-[16px] text-[15px] font-semibold text-left transition-all flex items-center justify-between group ${isSelected ? 'bg-apple-accent text-white shadow-lg scale-[1.02]' : (hasBuses ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-600')} hover:bg-black/[0.04] dark:hover:bg-white/[0.06] mb-1" role="option" aria-selected="${isSelected}">
-                    <div class="flex flex-col truncate pr-2">
-                        <span class="truncate leading-tight">${lang === 'zh' ? stop.name_zh : stop.name_en}</span>
-                        <div class="mt-0.5">${distLabel}</div>
-                    </div>
-                    <span class="shrink-0 font-mono text-[10px] px-2 py-0.5 rounded-full transition-colors ${badgeClass}">${count}</span>
-                </button>`;
-            }).join('');
+                const name = lang === 'zh' ? stop.name_zh : stop.name_en;
+                const data = { stop, count, isSelected, hasBuses, badgeClass, distLabel, name };
+
+                const existing = stopGridStates.get(stop.id);
+                if (existing) {
+                    updateStopItem(existing, data);
+                    frag.appendChild(existing.btn);
+                } else {
+                    const state = createStopItem(data);
+                    stopGridStates.set(stop.id, state);
+                    frag.appendChild(state.btn);
+                }
+            });
+
+            for (const [key, state] of stopGridStates) {
+                if (!newKeys.has(key)) {
+                    state.btn.remove();
+                    stopGridStates.delete(key);
+                }
+            }
+
+            container.innerHTML = '';
+            container.appendChild(frag);
+        }
+
+        function createStopItem(data) {
+            const { stop, count, isSelected, hasBuses, badgeClass, distLabel, name } = data;
+            const btn = document.createElement('button');
+            btn.setAttribute('data-stop-id', stop.id);
+            btn.setAttribute('onclick', `setStop('${stop.id}', true)`);
+            btn.setAttribute('role', 'option');
+            btn.setAttribute('aria-selected', String(isSelected));
+            btn.className = `w-full px-5 py-3 rounded-[16px] text-[15px] font-semibold text-left transition-[background-color,color,box-shadow,transform] flex items-center justify-between group ${isSelected ? 'bg-apple-accent text-white shadow-lg scale-[1.02]' : (hasBuses ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-600')} hover:bg-black/[0.04] dark:hover:bg-white/[0.06] mb-1`;
+            btn.innerHTML = `
+                <div class="flex flex-col truncate pr-2">
+                    <span data-stop-name class="truncate leading-tight">${name}</span>
+                    <div data-stop-dist class="mt-0.5">${distLabel}</div>
+                </div>
+                <span data-stop-badge class="shrink-0 font-mono text-[10px] px-2 py-0.5 rounded-full transition-colors ${badgeClass}">${count}</span>`;
+
+            const nameEl = btn.querySelector('[data-stop-name]');
+            const distEl = btn.querySelector('[data-stop-dist]');
+            const badgeEl = btn.querySelector('[data-stop-badge]');
+            return {
+                btn, nameEl, distEl, badgeEl,
+                lastName: name, lastDist: distLabel, lastBadge: badgeClass, lastClassName: btn.className, lastCount: count
+            };
+        }
+
+        function updateStopItem(state, data) {
+            const { count, isSelected, hasBuses, badgeClass, distLabel, name } = data;
+
+            if (name !== state.lastName) {
+                state.nameEl.textContent = name;
+                state.lastName = name;
+            }
+            if (distLabel !== state.lastDist) {
+                state.distEl.innerHTML = distLabel;
+                state.lastDist = distLabel;
+            }
+            if (count !== state.lastCount) {
+                state.badgeEl.textContent = String(count);
+                state.lastCount = count;
+            }
+            if (badgeClass !== state.lastBadge) {
+                state.badgeEl.className = `shrink-0 font-mono text-[10px] px-2 py-0.5 rounded-full transition-colors ${badgeClass}`;
+                state.lastBadge = badgeClass;
+            }
+            const newClassName = `w-full px-5 py-3 rounded-[16px] text-[15px] font-semibold text-left transition-[background-color,color,box-shadow,transform] flex items-center justify-between group ${isSelected ? 'bg-apple-accent text-white shadow-lg scale-[1.02]' : (hasBuses ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-600')} hover:bg-black/[0.04] dark:hover:bg-white/[0.06] mb-1`;
+            if (newClassName !== state.lastClassName) {
+                state.btn.className = newClassName;
+                state.lastClassName = newClassName;
+            }
+            if (state.btn.getAttribute('aria-selected') !== String(isSelected)) {
+                state.btn.setAttribute('aria-selected', String(isSelected));
+            }
         }
 
         function renderTimeline(bus) {
@@ -1202,6 +1218,7 @@
                     listDiv.innerHTML =
                         `<div class="col-span-full py-12 text-center text-slate-400 text-xs font-medium">${t('loading')}</div>`;
                 }
+                cardStates.clear();
                 return;
             }
 
@@ -1226,6 +1243,7 @@
             if (filtered.length === 0) {
                 listDiv.innerHTML =
                     `<div class="col-span-full py-12 text-center text-slate-400 text-xs font-medium border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">${t('empty')}</div>`;
+                cardStates.clear();
                 return;
             }
 
@@ -1235,11 +1253,13 @@
                 if (activeContainer) savedScrollTop = activeContainer.scrollTop;
             }
 
-            listDiv.innerHTML = filtered.map(bus => {
+            const newKeys = new Set();
+            const frag = document.createDocumentFragment();
+            filtered.forEach(bus => {
                 const routeMatch = bus.route_name.match(/^[0-9A-Z]+/i);
                 const routeDisp = routeMatch ? routeMatch[0] : bus.route_name.split(' ')[0];
                 const tripId = `${bus.route_id}-${bus.stop_id}-${bus.arrival_time}`;
-                const isExpanded = expandedTripId === tripId;
+                newKeys.add(tripId);
 
                 let statusCls =
                     'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/30';
@@ -1263,24 +1283,29 @@
                 }
 
                 const isPastCard = bus.isPast && bus.diff < -1;
-                const pastCardCls = isPastCard ? 'opacity-50' : '';
-                return `
-                <div data-arrival-time="${bus.arrival_time}" data-is-past="${isPastCard}" onclick="toggleTripDetails('${tripId}')" class="apple-card rounded-[24px] px-5 py-5 cursor-pointer active:scale-[0.98] ${isExpanded ? 'ring-2 ring-apple-accent/20 border-apple-accent/30' : ''} ${pastCardCls}">
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-center gap-4">
-                            <div onclick="openRouteDetails('${bus.route_id}', event)" class="w-12 h-12 shrink-0 bg-black dark:bg-white rounded-[14px] flex items-center justify-center text-white dark:text-black font-black text-sm shadow-apple hover:scale-110 active:scale-90 transition-transform z-10 relative" role="button" tabindex="0" aria-label="路線 ${routeDisp} 詳情">${routeDisp}</div>
-                            <div class="flex flex-col">
-                                <span class="text-[19px] font-extrabold tracking-tight text-slate-900 dark:text-white leading-none">${formatTime(bus.arrival_time)}</span>
-                            </div>
-                        </div>
-                        <div class="px-4 py-2 rounded-[16px] ${statusCls} text-center min-w-[70px]">
-                            <div class="countdown-value text-lg font-black leading-none">${displayDiff}</div>
-                            <div class="countdown-label text-[9px] font-bold uppercase mt-1 opacity-70">${timeLabel}</div>
-                        </div>
-                    </div>
-                    ${isExpanded ? `<div class="mt-4 px-1 animate-in fade-in slide-in-from-top-2 duration-300">${renderTimeline(bus)}</div>` : ''}
-                </div>`;
-            }).join('');
+                const isExpanded = expandedTripId === tripId;
+                const data = { tripId, bus, routeDisp, statusCls, displayDiff, timeLabel, isPastCard, isExpanded };
+
+                const existing = cardStates.get(tripId);
+                if (existing) {
+                    updateBusCard(existing, data);
+                    frag.appendChild(existing.card);
+                } else {
+                    const state = createBusCard(data);
+                    cardStates.set(tripId, state);
+                    frag.appendChild(state.card);
+                }
+            });
+
+            for (const [key, state] of cardStates) {
+                if (!newKeys.has(key)) {
+                    state.card.remove();
+                    cardStates.delete(key);
+                }
+            }
+
+            listDiv.innerHTML = '';
+            listDiv.appendChild(frag);
 
             if (expandedTripId && savedScrollTop > 0) {
                 requestAnimationFrame(() => {
@@ -1296,40 +1321,125 @@
             }
         }
 
+        function createBusCard(data) {
+            const { tripId, bus, routeDisp, statusCls, displayDiff, timeLabel, isPastCard, isExpanded } = data;
+
+            const card = document.createElement('div');
+            card.setAttribute('data-arrival-time', bus.arrival_time);
+            card.setAttribute('data-trip-id', tripId);
+            card.setAttribute('data-is-past', String(isPastCard));
+            card.setAttribute('onclick', `toggleTripDetails('${tripId}')`);
+            card.className = `apple-card rounded-[24px] px-5 py-5 cursor-pointer active:scale-[0.98]${isExpanded ? ' ring-2 ring-apple-accent/20 border-apple-accent/30' : ''}${isPastCard ? ' opacity-50' : ''}`;
+
+            card.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-4">
+                        <div onclick="openRouteDetails('${bus.route_id}', event)" class="w-12 h-12 shrink-0 bg-black dark:bg-white rounded-[14px] flex items-center justify-center text-white dark:text-black font-black text-sm shadow-apple hover:scale-110 active:scale-90 transition-transform z-10 relative" role="button" tabindex="0" aria-label="${ariaRouteDetails(routeDisp)}">${routeDisp}</div>
+                        <div class="flex flex-col">
+                            <span class="text-[19px] font-extrabold tracking-tight text-slate-900 dark:text-white leading-none">${bus.arrival_time.split(':').slice(0, 2).join(':')}</span>
+                        </div>
+                    </div>
+                    <div data-status class="px-4 py-2 rounded-[16px] ${statusCls} text-center min-w-[70px]">
+                        <div class="countdown-value text-lg font-black leading-none">${displayDiff}</div>
+                        <div class="countdown-label text-[9px] font-bold uppercase mt-1 opacity-70">${timeLabel}</div>
+                    </div>
+                </div>`;
+
+            if (isExpanded) {
+                const tl = document.createElement('div');
+                tl.setAttribute('data-timeline', '');
+                tl.className = 'mt-4 px-1 animate-in fade-in slide-in-from-top-2 duration-300';
+                tl.innerHTML = renderTimeline(bus);
+                card.appendChild(tl);
+            }
+
+            const diffEl = card.querySelector('.countdown-value');
+            const labelEl = card.querySelector('.countdown-label');
+            const statusEl = card.querySelector('[data-status]');
+            const timelineEl = card.querySelector('[data-timeline]');
+
+            return {
+                card, arrivalTime: bus.arrival_time, isPast: isPastCard,
+                diffEl, labelEl, statusEl, timelineEl,
+                lastValue: String(displayDiff), lastLabel: timeLabel
+            };
+        }
+
+        function updateBusCard(state, data) {
+            const { bus, statusCls, displayDiff, timeLabel, isPastCard, isExpanded } = data;
+
+            if (state.isPast !== isPastCard) {
+                state.isPast = isPastCard;
+                state.card.setAttribute('data-is-past', String(isPastCard));
+            }
+
+            const newValue = String(displayDiff);
+            if (newValue !== state.lastValue) {
+                state.diffEl.textContent = newValue;
+                state.lastValue = newValue;
+            }
+            if (timeLabel !== state.lastLabel) {
+                state.labelEl.textContent = timeLabel;
+                state.lastLabel = timeLabel;
+            }
+
+            state.statusEl.className = `px-4 py-2 rounded-[16px] ${statusCls} text-center min-w-[70px]`;
+            state.card.classList.toggle('opacity-50', isPastCard);
+            state.card.classList.toggle('ring-2', isExpanded);
+            state.card.classList.toggle('ring-apple-accent/20', isExpanded);
+            state.card.classList.toggle('border-apple-accent/30', isExpanded);
+
+            if (isExpanded) {
+                if (state.timelineEl) {
+                    state.timelineEl.innerHTML = renderTimeline(bus);
+                } else {
+                    const tl = document.createElement('div');
+                    tl.setAttribute('data-timeline', '');
+                    tl.className = 'mt-4 px-1 animate-in fade-in slide-in-from-top-2 duration-300';
+                    tl.innerHTML = renderTimeline(bus);
+                    state.card.appendChild(tl);
+                    state.timelineEl = tl;
+                }
+            } else if (state.timelineEl) {
+                state.timelineEl.remove();
+                state.timelineEl = null;
+            }
+        }
+
         function tickCountdownOnly(now = getNow(), currentMinutes = now.getHours() * 60 + now.getMinutes()) {
             const tickPastLimit = showPastBuses ? -30 : -1;
             let needsFullRender = false;
             const minuteChanged = currentMinutes !== lastRenderMinute;
-            const busList = document.getElementById('bus-list');
-            if (!busList) return;
-            const cards = busList.querySelectorAll('[data-arrival-time]');
-            if (cards.length === 0) return;
+            if (cardStates.size === 0) return;
 
-            cards.forEach(card => {
-                const arrivalTime = card.getAttribute('data-arrival-time');
-                const diff = calcDiffMinutes(arrivalTime, currentMinutes);
-                const diffEl = card.querySelector('.countdown-value');
-                const labelEl = card.querySelector('.countdown-label');
-                if (!diffEl || !labelEl) return;
-
-                if (card.getAttribute('data-is-past') === 'true') {
-                    diffEl.textContent = Math.abs(diff);
-                    labelEl.textContent = t('pastMinLabel');
+            for (const state of cardStates.values()) {
+                const diff = calcDiffMinutes(state.arrivalTime, currentMinutes);
+                let newValue, newLabel;
+                if (state.isPast) {
+                    newValue = String(Math.abs(diff));
+                    newLabel = t('pastMinLabel');
                 } else if (diff <= 0) {
-                    diffEl.textContent = '--';
-                    labelEl.textContent = t('arrived');
+                    newValue = '--';
+                    newLabel = t('arrived');
                 } else if (diff <= 5) {
-                    diffEl.textContent = diff;
-                    labelEl.textContent = t('soon');
+                    newValue = String(diff);
+                    newLabel = t('soon');
                 } else {
-                    diffEl.textContent = diff;
-                    labelEl.textContent = t('unit');
+                    newValue = String(diff);
+                    newLabel = t('unit');
                 }
-
+                if (newValue !== state.lastValue) {
+                    state.diffEl.textContent = newValue;
+                    state.lastValue = newValue;
+                }
+                if (newLabel !== state.lastLabel) {
+                    state.labelEl.textContent = newLabel;
+                    state.lastLabel = newLabel;
+                }
                 if (diff < tickPastLimit || diff > 65) {
                     needsFullRender = true;
                 }
-            });
+            }
 
             if (minuteChanged || needsFullRender) {
                 lastRenderMinute = currentMinutes;
@@ -1439,7 +1549,7 @@
                     const listDiv = document.getElementById('bus-list');
                     if (listDiv) {
                         listDiv.innerHTML =
-                            `<div class="col-span-full p-6 text-center text-red-500 bg-red-50 dark:bg-red-900/20 rounded-2xl text-sm font-medium">${t('loadError')}<br><span class="text-xs opacity-70 mt-1 block">${e.message}</span><br><button onclick="loadData()" class="mt-3 px-4 py-1.5 bg-red-500 text-white text-xs rounded-full hover:bg-red-600 transition-colors">Retry</button></div>`;
+                            `<div class="col-span-full p-6 text-center text-red-500 bg-red-50 dark:bg-red-900/20 rounded-2xl text-sm font-medium">${t('loadError')}<br><span class="text-xs opacity-70 mt-1 block">${e.message}</span><br><button onclick="loadData()" class="mt-3 px-4 py-1.5 bg-red-500 text-white text-xs rounded-full hover:bg-red-600 transition-colors">${t('retry')}</button></div>`;
                     }
                 }
             });
@@ -1625,7 +1735,7 @@
                 const dayContainer = document.getElementById('day-picker-container');
                 if (dayContainer) {
                     dayContainer.innerHTML = [0, 1, 2, 3, 4, 5, 6].map(d =>
-                        `<button onclick="setTestDay(${d})" class="w-full h-[32px] rounded-[7px] text-[12px] font-semibold transition-all flex items-center justify-center ${d === currentDayIdx ? 'bg-white dark:bg-slate-600 text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}" aria-label="${days[d]}">${days[d]}</button>`
+                        `<button onclick="setTestDay(${d})" class="w-full h-[32px] rounded-[7px] text-[12px] font-semibold transition-[background-color,color,box-shadow] flex items-center justify-center ${d === currentDayIdx ? 'bg-white dark:bg-slate-600 text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}" aria-label="${days[d]}">${days[d]}</button>`
                     ).join('');
                 }
 
@@ -1643,9 +1753,9 @@
                     const inactiveClass =
                     'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300';
                     fixedBtn.className =
-                        `flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1 ${isTestTimeFixed ? activeClass : inactiveClass}`;
+                        `flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-[background-color,color,box-shadow] duration-200 flex items-center justify-center gap-1 ${isTestTimeFixed ? activeClass : inactiveClass}`;
                     flowBtn.className =
-                        `flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-all duration-200 flex items-center justify-center gap-1 ${!isTestTimeFixed ? activeClass : inactiveClass}`;
+                        `flex-1 py-1.5 text-11px font-semibold rounded-[7px] transition-[background-color,color,box-shadow] duration-200 flex items-center justify-center gap-1 ${!isTestTimeFixed ? activeClass : inactiveClass}`;
                 }
             }
         }
@@ -1930,8 +2040,13 @@
             timeEl.classList.toggle('text-slate-400', !isSimulated);
             dateEl.classList.toggle('text-orange-400', isSimulated);
             dateEl.classList.toggle('text-slate-500', !isSimulated);
-            document.getElementById('current-date').innerText = now.toLocaleDateString(lang === 'zh' ? 'zh-HK' : 'en-GB', { weekday: 'short',
-                day: 'numeric', month: 'short' }).toUpperCase();
+            const dateKey = now.toDateString() + '|' + lang;
+            if (dateKey !== cachedDateKey) {
+                cachedDateKey = dateKey;
+                cachedDateString = now.toLocaleDateString(lang === 'zh' ? 'zh-HK' : 'en-GB', { weekday: 'short',
+                    day: 'numeric', month: 'short' }).toUpperCase();
+                dateEl.innerText = cachedDateString;
+            }
         }
 
         function updateRefreshUI() {
@@ -1952,18 +2067,34 @@
             const el = document.getElementById('last-updated');
             if (!el) return;
             if (!lastUpdatedAt) {
-                el.textContent = '—';
+                if (lastUpdatedTextCache !== '—') {
+                    el.textContent = '—';
+                    lastUpdatedTextCache = '—';
+                }
                 return;
             }
             const diff = Math.max(0, Math.floor((Date.now() - lastUpdatedAt) / 1000));
-            if (diff < 5) {
-                el.textContent = t('updatedJustNow');
-            } else if (diff < 60) {
-                el.textContent = lang === 'zh' ? `${diff} ${t('updatedSecondsAgo')}` : `${diff}${t('updatedSecondsAgo')}`;
-            } else {
+            let text;
+            if (diff < 5) text = t('updatedJustNow');
+            else if (diff < 60) text = lang === 'zh' ? `${diff} ${t('updatedSecondsAgo')}` : `${diff}${t('updatedSecondsAgo')}`;
+            else {
                 const mins = Math.floor(diff / 60);
-                el.textContent = lang === 'zh' ? `${mins} ${t('updatedMinutesAgo')}` : `${mins}${t('updatedMinutesAgo')}`;
+                text = lang === 'zh' ? `${mins} ${t('updatedMinutesAgo')}` : `${mins}${t('updatedMinutesAgo')}`;
             }
+            if (text !== lastUpdatedTextCache) {
+                el.textContent = text;
+                lastUpdatedTextCache = text;
+            }
+        }
+
+        function tick() {
+            const now = getNow();
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            updateClock(now);
+            updateRefreshUI();
+            updateLastUpdated();
+            if (db.stops.length > 0) tickCountdownOnly(now, currentMinutes);
+            setTimeout(tick, 1000 - (Date.now() % 1000));
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -1972,14 +2103,7 @@
             updateClock();
             renderModeSelector();
             loadData();
-            setInterval(() => {
-                const now = getNow();
-                const currentMinutes = now.getHours() * 60 + now.getMinutes();
-                updateClock(now);
-                updateRefreshUI();
-                updateLastUpdated();
-                if (db.stops.length > 0) tickCountdownOnly(now, currentMinutes);
-            }, 1000);
+            setTimeout(tick, 1000 - (Date.now() % 1000));
             initBottomSheet('stop-list-sheet', 'stop-list-handle', () => toggleStopList(false));
             initBottomSheet('route-modal-card', 'route-modal-card', () => closeRouteModal());
             window.addEventListener('resize', () => {

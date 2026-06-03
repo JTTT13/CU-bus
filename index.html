@@ -126,6 +126,7 @@
         }
 
         #route-modal-card {
+            will-change: transform;
             transition: transform 0.45s cubic-bezier(0.28, 0.84, 0.42, 1), opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
         @media (max-width: 767px) {
@@ -548,9 +549,9 @@
     </div>
 
     <!-- Route Modal -->
-    <div id="route-modal" class="fixed inset-0 z-[90] hidden items-center justify-center" role="dialog" aria-modal="true" aria-label="路線詳情">
+    <div id="route-modal" class="fixed inset-0 z-[90] items-center justify-center" role="dialog" aria-modal="true" aria-label="路線詳情">
         <div class="absolute inset-0 bg-white/10 dark:bg-black/20 transition-opacity" onclick="closeRouteModal()"></div>
-        <div id="route-modal-card" class="relative bg-[#F2F2F7]/95 dark:bg-[#1C1C1E]/95 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col border border-white/20 dark:border-white/5">
+        <div id="route-modal-card" class="relative bg-[#F2F2F7]/95 dark:bg-[#1C1C1E]/95 shadow-2xl overflow-hidden flex flex-col border border-white/20 dark:border-white/5">
             <div class="h-8 w-full flex items-center justify-center md:hidden shrink-0 cursor-grab active:cursor-grabbing" onclick="closeRouteModal()">
                 <div class="w-9 h-1.5 bg-black/[0.15] dark:bg-white/[0.2] rounded-full transition-[background-color,transform] duration-200 active:scale-x-75"></div>
             </div>
@@ -1884,24 +1885,9 @@
 
             const routeMatch = routeId.match(/^[0-9A-Z]+/i);
             const routeDisp = routeMatch ? routeMatch[0] : routeId.split(' ')[0];
-
-            document.getElementById('modal-route-icon').innerText = routeDisp;
-            document.getElementById('modal-route-name').innerText = lang === 'zh' ? route.name_zh : route.name_en;
-            document.getElementById('modal-route-category').innerText = lang === 'zh' ? route.category_zh : route
-            .category_en;
-
-            const parentDiv = document.getElementById('modal-route-category').parentElement;
-            while (parentDiv.children.length > 1) parentDiv.removeChild(parentDiv.lastChild);
-
-            const badgesHtml = getServiceBadges(route);
-            if (badgesHtml) {
-                const badgeContainer = document.createElement('div');
-                badgeContainer.className = 'flex gap-1.5 items-center ml-1';
-                badgeContainer.innerHTML = badgesHtml;
-                parentDiv.appendChild(badgeContainer);
-            }
-
-            document.getElementById('modal-route-time').innerText =
+            const name = lang === 'zh' ? route.name_zh : route.name_en;
+            const category = lang === 'zh' ? route.category_zh : route.category_en;
+            const timeText =
                 `${(route.open_time || '00:00').substring(0, 5)} - ${(route.close_time || '23:59').substring(0, 5)}`;
 
             let depMins = route.departure_mins_json;
@@ -1914,7 +1900,6 @@
                     `每小時 ${depMins.map(m => String(m).padStart(2, '0')).join(', ')} 分開出` :
                     `Departs at ${depMins.map(m => String(m).padStart(2, '0')).join(', ')} past hour`) :
                 (lang === 'zh' ? '請查閱時間表' : 'Check Schedule');
-            document.getElementById('modal-route-freq').innerText = freqText;
 
             const dayTypeMap = {
                 'MON_TO_SAT': lang === 'zh' ? '星期一至六' : 'Mon-Sat',
@@ -1922,13 +1907,33 @@
                 'MON_TO_FRI_TEACHING_ONLY': lang === 'zh' ? '星期一至五（教學日）' : 'Mon-Fri (Teaching Only)',
                 'SUN_AND_PUBLIC_HOLIDAY': lang === 'zh' ? '星期日及公眾假期' : 'Sun & Public Holidays'
             };
-            document.getElementById('modal-route-days').innerText = dayTypeMap[route.operating_day_type] || route
-                .operating_day_type;
+            const dayText = dayTypeMap[route.operating_day_type] || route.operating_day_type;
 
             let remarks = lang === 'zh' ? route.remarks_zh : route.remarks_en;
             if (!remarks || !remarks.trim()) {
                 remarks = lang === 'zh' ? route.remarks_en : route.remarks_zh;
             }
+
+            // Batch DOM writes
+            document.getElementById('modal-route-icon').innerText = routeDisp;
+            document.getElementById('modal-route-name').innerText = name;
+            document.getElementById('modal-route-category').innerText = category;
+
+            const parentDiv = document.getElementById('modal-route-category').parentElement;
+            while (parentDiv.children.length > 1) parentDiv.removeChild(parentDiv.lastChild);
+
+            const badgesHtml = getServiceBadges(route);
+            if (badgesHtml) {
+                const badgeContainer = document.createElement('div');
+                badgeContainer.className = 'flex gap-1.5 items-center ml-1';
+                badgeContainer.innerHTML = badgesHtml;
+                parentDiv.appendChild(badgeContainer);
+            }
+
+            document.getElementById('modal-route-time').innerText = timeText;
+            document.getElementById('modal-route-freq').innerText = freqText;
+            document.getElementById('modal-route-days').innerText = dayText;
+
             const remarksContainer = document.getElementById('modal-remarks-container');
             if (remarks && remarks.trim()) {
                 document.getElementById('modal-remarks').innerText = remarks;
@@ -1948,12 +1953,10 @@
             activeRouteId = routeId;
             populateRouteModal(routeId);
 
-            const modal = document.getElementById('route-modal');
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.add('visible');
+            requestAnimationFrame(() => {
+                document.getElementById('route-modal').classList.add('visible');
                 document.body.classList.add('modal-open');
-            }, 10);
+            });
         }
 
         function closeRouteModal() {

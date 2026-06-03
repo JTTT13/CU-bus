@@ -169,25 +169,25 @@
         }
         @media (min-width: 768px) {
             #route-modal {
-                justify-content: flex-end;
+                justify-content: center;
                 align-items: center;
-                padding: 2.5rem;
-                top: 0;
+                padding: 2rem;
             }
             #route-modal-card {
                 height: auto;
-                max-height: calc(100vh - 5rem);
-                width: 420px;
-                border-radius: 24px;
-                transform: translateX(110%) scale(0.96);
+                max-height: calc(100vh - 4rem);
+                width: 480px;
+                max-width: 90vw;
+                border-radius: 28px;
+                transform: translateY(24px) scale(0.96);
                 opacity: 0;
-                box-shadow: -16px 0 64px rgba(0, 0, 0, 0.18), 0 8px 32px rgba(0, 0, 0, 0.08);
+                box-shadow: 0 24px 80px rgba(0, 0, 0, 0.2), 0 8px 32px rgba(0, 0, 0, 0.08);
             }
             .dark #route-modal-card {
-                box-shadow: -16px 0 64px rgba(0, 0, 0, 0.5), 0 8px 32px rgba(0, 0, 0, 0.3);
+                box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5), 0 8px 32px rgba(0, 0, 0, 0.3);
             }
             #route-modal.visible #route-modal-card {
-                transform: translateX(0) scale(1);
+                transform: translateY(0) scale(1);
                 opacity: 1;
             }
         }
@@ -202,6 +202,18 @@
         }
         .info-pill:active {
             transform: scale(0.985);
+        }
+        @media (min-width: 768px) {
+            .apple-card {
+                transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, background-color 0.3s, border-color 0.3s;
+            }
+            .apple-card:hover {
+                transform: scale(1.015);
+                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+            }
+            .dark .apple-card:hover {
+                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+            }
         }
 
         #route-modal-card .overflow-y-auto {
@@ -368,9 +380,9 @@
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 py-3 md:py-6">
-        <div class="flex flex-col md:flex-row gap-4 lg:gap-6">
-            <aside class="w-full md:w-80 shrink-0">
+    <main class="max-w-7xl mx-auto px-4 py-3 md:py-8 lg:px-8">
+        <div class="flex flex-col md:flex-row gap-4 lg:gap-8 xl:gap-10">
+            <aside class="w-full md:w-80 xl:w-96 shrink-0">
                 <div class="sticky-panel space-y-6">
                     <div id="mode-selector" class="flex p-1 bg-black/[0.05] dark:bg-white/[0.1] rounded-[12px] backdrop-blur-sm" role="tablist" aria-label="Schedule mode"></div>
                     <div class="apple-card rounded-[24px] overflow-hidden">
@@ -585,7 +597,7 @@
 
     <!-- Route Modal -->
     <div id="route-modal" class="fixed inset-0 z-[90] items-center justify-center" role="dialog" aria-modal="true" aria-label="路線詳情">
-        <div class="absolute inset-0 bg-white/10 dark:bg-black/20 transition-opacity" onclick="closeRouteModal()"></div>
+        <div class="absolute inset-0 bg-white/10 dark:bg-black/20 md:bg-black/30 md:dark:bg-black/50 transition-opacity" onclick="closeRouteModal()"></div>
         <div id="route-modal-card" class="relative bg-[#F2F2F7]/95 dark:bg-[#1C1C1E]/95 shadow-2xl overflow-hidden flex flex-col border border-white/20 dark:border-white/5">
             <div class="h-8 w-full flex items-center justify-center md:hidden shrink-0 cursor-grab active:cursor-grabbing" onclick="closeRouteModal()">
                 <div class="w-9 h-1.5 bg-black/[0.15] dark:bg-white/[0.2] rounded-full transition-[background-color,transform] duration-200 active:scale-x-75"></div>
@@ -2038,6 +2050,29 @@
             activeRouteId = null;
             if (navigator.vibrate) navigator.vibrate(3);
         }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const routeModal = document.getElementById('route-modal');
+                if (routeModal.classList.contains('visible')) { closeRouteModal(); return; }
+                const settingsModal = document.getElementById('settings-modal');
+                if (!settingsModal.classList.contains('hidden')) { toggleSettings(); return; }
+                const mapModal = document.getElementById('map-modal');
+                if (!mapModal.classList.contains('hidden')) { closeMapView(); return; }
+            }
+            if (e.key === 's' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                const target = e.target;
+                if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+                e.preventDefault();
+                toggleSettings();
+            }
+            if (e.key === 'm' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                const target = e.target;
+                if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+                e.preventDefault();
+                openMapView();
+            }
+        });
 
         // --- Map ---
         let mapInstance = null;

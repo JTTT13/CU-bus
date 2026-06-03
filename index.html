@@ -7,6 +7,13 @@
     <script src="https://cdn.tailwindcss.com">
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/icon.svg">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+    </script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -28,6 +35,7 @@
         }
 
         const SETTINGS_KEY = 'cuhk_bus_vibe_settings';
+        const CACHE_UPDATE_KEY = 'cuhk_bus_cache_updated';
         let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {
             stopId: '',
             lang: 'zh',
@@ -38,10 +46,11 @@
             testDay: null,
             isDevMode: false,
             showPastBuses: false,
-            isTestTimeFixed: true
+            isTestTimeFixed: true,
+            mapStyle: 'osm'
         };
 
-        let { lang, isDark, mode: currentMode, autoSwitchStop, testTime, testDay, isDevMode, showPastBuses, isTestTimeFixed } = settings;
+        let { lang, isDark, mode: currentMode, autoSwitchStop, testTime, testDay, isDevMode, showPastBuses, isTestTimeFixed, mapStyle } = settings;
         let currentStopId = settings.stopId || '';
         let testTimeSetAt = (testTime && !isTestTimeFixed) ? Date.now() : null;
 
@@ -338,6 +347,12 @@
                     </svg>
                 </button>
 
+                <button onclick="openMapView()" class="w-9 h-9 flex items-center justify-center hover:bg-black/[0.05] dark:hover:bg-white/[0.1] rounded-full transition-[background-color,transform] active:scale-90" aria-label="地圖">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-[18px] w-[18px] text-slate-700 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                </button>
+
                 <div class="relative w-9 h-9 flex items-center justify-center">
                     <svg class="absolute inset-0 w-full h-full -rotate-90 pointer-events-none transform scale-110" viewBox="0 0 36 36" aria-hidden="true">
                         <path class="text-black/5 dark:text-white/5" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" />
@@ -488,6 +503,10 @@
                     </div>
                 </div>
                 <div class="space-y-3">
+                    <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">🗺 <span data-i18n="mapStyle">地圖樣式</span></h3>
+                    <div class="flex p-1 bg-black/[0.05] dark:bg-white/[0.1] rounded-[12px] backdrop-blur-sm" id="map-style-selector" role="tablist" aria-label="地圖樣式"></div>
+                </div>
+                <div class="space-y-3">
                     <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest" data-i18n="advanced">進階</h3>
                     <div class="flex items-center justify-between py-3 px-4 bg-white dark:bg-[#2C2C2E] rounded-[16px]">
                         <div class="flex items-center gap-3">
@@ -541,6 +560,20 @@
                                 <p class="text-[10px] text-center text-slate-400 dark:text-slate-500" data-i18n="timeHint">點擊時間或日期即可模擬該時段班次</p>
                             </div>
                         </div>
+                    </div>
+                    <div class="flex items-center justify-between py-3 px-4 bg-white dark:bg-[#2C2C2E] rounded-[16px]">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-teal-500 rounded-[10px] flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-[15px] font-semibold text-slate-900 dark:text-white" data-i18n="cacheLastUpdate">快取最後更新</span>
+                                <span id="cache-update-time" class="text-[11px] text-slate-500 dark:text-slate-400 font-mono">---</span>
+                            </div>
+                        </div>
+                        <button onclick="refreshCache()" id="refresh-cache-btn" class="px-4 py-2 bg-apple-accent text-white text-[12px] font-bold rounded-[10px] hover:bg-apple-accent/90 active:scale-95 transition-[background-color,transform] shrink-0" data-i18n="refreshCache">更新</button>
                     </div>
                 </div>
             </div>
@@ -615,6 +648,22 @@
         </div>
     </div>
 
+    <!-- Map Modal -->
+    <div id="map-modal" class="fixed inset-0 z-[120] hidden items-center justify-center" role="dialog" aria-modal="true" aria-label="地圖">
+        <div id="map-backdrop" class="absolute inset-0 bg-black/40 dark:bg-black/60" onclick="closeMapView()"></div>
+        <div class="relative bg-[#F2F2F7] dark:bg-[#1C1C1E] rounded-[28px] shadow-2xl w-[95vw] max-w-[900px] h-[85vh] max-h-[700px] overflow-hidden border border-black/5 dark:border-white/10 flex flex-col">
+            <div class="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
+                <h2 class="text-[22px] font-extrabold tracking-tight text-slate-900 dark:text-white" data-i18n="map">地圖</h2>
+                <button onclick="closeMapView()" class="w-9 h-9 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 rounded-full flex items-center justify-center transition-[background-color,transform] active:scale-90" aria-label="關閉地圖">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="map-container" class="flex-1 mx-4 mb-4 rounded-[16px] z-0"></div>
+        </div>
+    </div>
+
     <script>
         let db = { stops: [], stopMap: {}, arrivals: [], route_times: [], routes: [], segments: [], segmentsByRoute: {} };
         const urlParams = new URLSearchParams(window.location.search);
@@ -681,7 +730,15 @@
                 noGpsSupport: '不支援定位',
                 updatedJustNow: '剛剛更新',
                 updatedSecondsAgo: '秒前更新',
-                updatedMinutesAgo: '分鐘前更新'
+                updatedMinutesAgo: '分鐘前更新',
+                map: '地圖',
+                cacheLastUpdate: '快取最後更新',
+                refreshCache: '更新',
+                mapStyle: '地圖樣式',
+                style_osm: 'OSM',
+                style_positron: '淺色',
+                style_darkmatter: '深色',
+                style_voyager: '標籤'
             },
             en: {
                 serviceHours: "Service Hours",
@@ -724,7 +781,15 @@
                 noGpsSupport: 'No GPS support',
                 updatedJustNow: 'Just now',
                 updatedSecondsAgo: 's ago',
-                updatedMinutesAgo: 'm ago'
+                updatedMinutesAgo: 'm ago',
+                map: 'Map',
+                mapStyle: 'Map Style',
+                style_osm: 'OSM',
+                style_positron: 'Light',
+                style_darkmatter: 'Dark',
+                style_voyager: 'Label',
+                cacheLastUpdate: 'Cache Last Updated',
+                refreshCache: 'Refresh'
             }
         };
 
@@ -779,7 +844,8 @@
                     testDay,
                     isDevMode,
                     showPastBuses,
-                    isTestTimeFixed
+                    isTestTimeFixed,
+                    mapStyle
                 }));
             } catch (e) {
                 console.warn('[CU BUS] Failed to save settings:', e);
@@ -967,13 +1033,28 @@
             }, 120);
         }
 
+        function getBusCounts() {
+            const now = getNow();
+            const cm = now.getHours() * 60 + now.getMinutes();
+            const c = {};
+            (db.arrivals || []).forEach(arr => {
+                const dt = arr.day_type || "";
+                let m = false;
+                if (currentMode === 'weekday') m = dt.includes('MON') || dt === 'N' || dt === '';
+                else if (currentMode === 'nonteaching') m = dt.includes('MON') && !dt.includes('TEACHING');
+                else if (currentMode === 'sunday') m = dt.includes('SUN') || dt.includes('HOLIDAY') || dt === 'N';
+                if (!m) return;
+                const d = calcDiffMinutes(arr.arrival_time, cm);
+                if (d >= -1 && d <= 60) c[arr.stop_id] = (c[arr.stop_id] || 0) + 1;
+            });
+            return c;
+        }
+
         function renderStopGrid() {
             const query = (document.getElementById('stop-search')?.value || '').toLowerCase();
             const container = document.getElementById('stop-grid');
             if (!container) return;
 
-            const now = getNow();
-            const currentMinutes = now.getHours() * 60 + now.getMinutes();
             const safeArrivals = db.arrivals || [];
 
             const stopRoutesMap = {};
@@ -982,20 +1063,7 @@
                 stopRoutesMap[arr.stop_id].add((arr.route_name || '').toLowerCase());
             });
 
-            const busCounts = {};
-            safeArrivals.forEach(arr => {
-                const dt = arr.day_type || "";
-                let isMatch = false;
-                if (currentMode === 'weekday') isMatch = dt.includes('MON') || dt === 'N' || dt === '';
-                else if (currentMode === 'nonteaching') isMatch = dt.includes('MON') && !dt.includes('TEACHING');
-                else if (currentMode === 'sunday') isMatch = dt.includes('SUN') || dt.includes('HOLIDAY') || dt ===
-                    'N';
-                if (!isMatch) return;
-                const diff = calcDiffMinutes(arr.arrival_time, currentMinutes);
-                if (diff >= -1 && diff <= 60) {
-                    busCounts[arr.stop_id] = (busCounts[arr.stop_id] || 0) + 1;
-                }
-            });
+            const busCounts = getBusCounts();
 
             let filteredStops = db.stops.filter(s => {
                 const nameMatch = s.name_zh.toLowerCase().includes(query) || s.name_en.toLowerCase().includes(
@@ -1715,6 +1783,8 @@
             updateToggleButton('auto-switch-btn', 'auto-switch-knob', autoSwitchStop);
             updateToggleButton('past-buses-btn', 'past-buses-knob', showPastBuses);
             updateToggleButton('dev-mode-btn', 'dev-mode-knob', isDevMode);
+            renderMapStyleSelector();
+            renderCacheStatus();
 
             document.getElementById('lang-label').textContent = lang === 'en' ? 'English' : '繁體中文';
 
@@ -1969,6 +2039,109 @@
             if (navigator.vibrate) navigator.vibrate(3);
         }
 
+        // --- Map ---
+        let mapInstance = null;
+        let mapMarkers = [];
+        let tileLayer = null;
+
+        const TILE_STYLES = {
+            osm: {
+                url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                attr: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>'
+            },
+            positron: {
+                url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                attr: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+            },
+            darkmatter: {
+                url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                attr: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+            },
+            voyager: {
+                url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                attr: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+            }
+        };
+
+        function getColorByCount(count, isSelected) {
+            if (isSelected) return '#007AFF';
+            if (count >= 3) return '#34C759';
+            if (count >= 1) return '#FF9500';
+            return '#8E8E93';
+        }
+
+        function setMapTileStyle(key) {
+            const style = TILE_STYLES[key];
+            if (!style) return;
+            if (tileLayer) mapInstance.removeLayer(tileLayer);
+            tileLayer = L.tileLayer(style.url, { maxZoom: 19, attribution: style.attr }).addTo(mapInstance);
+        }
+
+        function initMapView() {
+            if (mapInstance) return;
+            mapInstance = L.map('map-container', { zoomControl: true });
+            setMapTileStyle(mapStyle || 'osm');
+            const bounds = [];
+            db.stops.forEach(s => {
+                const lng = s.lng ?? s.long;
+                if (s.lat && lng) {
+                    bounds.push([s.lat, lng]);
+                    const marker = L.circleMarker([s.lat, lng], {
+                        radius: 10, fillOpacity: 0.9, stroke: true, color: '#fff', weight: 2
+                    }).addTo(mapInstance);
+                    marker.on('click', () => { setStop(s.id, true); closeMapView(); });
+                    mapMarkers.push({ stopId: s.id, marker });
+                }
+            });
+            if (bounds.length) mapInstance.fitBounds(bounds, { padding: [40, 40] });
+        }
+
+        function openMapView() {
+            initMapView();
+            const counts = getBusCounts();
+            mapMarkers.forEach(({ stopId, marker }) => {
+                const count = counts[stopId] || 0;
+                const sel = stopId === currentStopId;
+                marker.setStyle({ fillColor: getColorByCount(count, sel) });
+                const s = db.stopMap[stopId];
+                const name = s ? (lang === 'zh' ? s.name_zh : s.name_en) : stopId;
+                marker.unbindTooltip();
+                marker.bindTooltip(name + (count > 0 ? ' (' + count + ')' : ''));
+            });
+            if (currentStopId && db.stopMap[currentStopId]) {
+                const s = db.stopMap[currentStopId];
+                mapInstance.flyTo([s.lat, s.lng], 16);
+            }
+            document.getElementById('map-modal').classList.remove('hidden');
+            document.getElementById('map-modal').classList.add('flex');
+            document.body.classList.add('modal-open');
+            setTimeout(() => { if (mapInstance) mapInstance.invalidateSize(); }, 250);
+        }
+
+        function closeMapView() {
+            document.getElementById('map-modal').classList.remove('flex');
+            document.getElementById('map-modal').classList.add('hidden');
+            document.body.classList.remove('modal-open');
+        }
+
+        function changeMapStyle(key) {
+            if (mapStyle === key) return;
+            mapStyle = key;
+            saveSettings();
+            if (mapInstance) setMapTileStyle(key);
+            renderMapStyleSelector();
+        }
+
+        function renderMapStyleSelector() {
+            const keys = ['osm', 'positron', 'darkmatter', 'voyager'];
+            const container = document.getElementById('map-style-selector');
+            if (!container) return;
+            container.innerHTML = keys.map(k =>
+                `<button onclick="changeMapStyle('${k}')" class="flex-1 py-1.5 text-[10px] sm:text-[11px] font-semibold rounded-[9px] transition-[background-color,color,box-shadow] duration-300 ${mapStyle === k ? 'bg-white dark:bg-[#3A3A3C] text-black dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'}" role="tab" aria-selected="${mapStyle === k}">${t('style_' + k)}</button>`
+            ).join('');
+        }
+        // --- End Map ---
+
         function refreshRouteModalIfOpen() {
             if (activeRouteId) populateRouteModal(activeRouteId);
         }
@@ -2091,6 +2264,33 @@
             }
         }
 
+        function renderCacheStatus() {
+            const el = document.getElementById('cache-update-time');
+            if (!el) return;
+            const ts = localStorage.getItem(CACHE_UPDATE_KEY);
+            if (!ts) { el.textContent = '---'; return; }
+            const d = new Date(parseInt(ts));
+            const pad = n => String(n).padStart(2, '0');
+            el.textContent = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+
+        async function refreshCache() {
+            const btn = document.getElementById('refresh-cache-btn');
+            if (!btn) return;
+            btn.disabled = true;
+            btn.textContent = '...';
+            localStorage.setItem(CACHE_UPDATE_KEY, String(Date.now()));
+            if ('serviceWorker' in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(regs.map(r => r.unregister()));
+            }
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                await Promise.all(keys.map(k => caches.delete(k)));
+            }
+            location.reload();
+        }
+
         function tick() {
             const now = getNow();
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -2121,6 +2321,10 @@
                 else if (isStopListOpen) toggleStopList(false);
             }
         });
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
     </script>
 </body>
 </html>

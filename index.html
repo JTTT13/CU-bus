@@ -4,15 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CU BUS</title>
-    <script src="https://cdn.tailwindcss.com">
-    </script>
+    <link rel="stylesheet" href="vendor/tw.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <link rel="apple-touch-icon" href="/icon.svg">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+    <link rel="apple-touch-icon" href="icons/icon-180.png">
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+    <script src="vendor/leaflet/leaflet.js">
     </script>
     <script>
         tailwind.config = {
@@ -89,25 +88,15 @@
             position: sticky;
             top: 80px;
             z-index: 40;
-        }
-        @media (max-width: 767px) {
-            .sticky-panel {
-                margin: 0;
-                padding: 1rem 0;
-                border-bottom: none;
-                background: transparent;
-            }
+            margin: 0;
+            padding: 1rem 0;
+            border-bottom: none;
+            background: transparent;
         }
         .bus-card-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-            gap: 1.5rem;
-        }
-        @media (max-width: 640px) {
-            .bus-card-grid {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
+            grid-template-columns: 1fr;
+            gap: 1rem;
         }
         .pb-safe-area {
             padding-bottom: calc(2.5rem + env(safe-area-inset-bottom));
@@ -140,58 +129,31 @@
             will-change: transform;
             transition: transform 0.45s cubic-bezier(0.28, 0.84, 0.42, 1), opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        @media (max-width: 767px) {
-            #route-modal-card {
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                width: 100%;
-                height: auto;
-                max-height: calc(100dvh - 64px);
-                border-radius: 28px 28px 0 0;
-                transform: translateY(110%);
-                padding-bottom: calc(1rem + env(safe-area-inset-bottom));
-                background: #F5F5F7;
-                box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.12);
-            }
-            .dark #route-modal-card {
-                background: #1C1C1E;
-                box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.4);
-            }
-            #route-modal.visible #route-modal-card {
-                transform: translateY(0);
-                opacity: 1;
-            }
-            .dragging {
-                transition: none !important;
-            }
+        #route-modal-card {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: auto;
+            max-height: calc(100dvh - 64px);
+            border-radius: 28px 28px 0 0;
+            transform: translateY(110%);
+            padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+            background: #F5F5F7;
+            box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.12);
         }
-        @media (min-width: 768px) {
-            #route-modal {
-                justify-content: center;
-                align-items: center;
-                padding: 2rem;
-            }
-            #route-modal-card {
-                height: auto;
-                max-height: calc(100vh - 4rem);
-                width: 480px;
-                max-width: 90vw;
-                border-radius: 28px;
-                transform: translateY(24px) scale(0.96);
-                opacity: 0;
-                box-shadow: 0 24px 80px rgba(0, 0, 0, 0.2), 0 8px 32px rgba(0, 0, 0, 0.08);
-            }
-            .dark #route-modal-card {
-                box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5), 0 8px 32px rgba(0, 0, 0, 0.3);
-            }
-            #route-modal.visible #route-modal-card {
-                transform: translateY(0) scale(1);
-                opacity: 1;
-            }
+        .dark #route-modal-card {
+            background: #1C1C1E;
+            box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.4);
         }
-
+        #route-modal.visible #route-modal-card {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .dragging {
+            transition: none !important;
+        }
         .info-pill {
             @apply bg-white/60 dark:bg-white/[0.03] border border-black/[0.08] dark:border-white/[0.08] rounded-2xl p-4 flex flex-col gap-1.5 shadow-sm hover:shadow-md transition-[box-shadow,transform] duration-200;
             height: auto;
@@ -203,19 +165,6 @@
         .info-pill:active {
             transform: scale(0.985);
         }
-        @media (min-width: 768px) {
-            .apple-card {
-                transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, background-color 0.3s, border-color 0.3s;
-            }
-            .apple-card:hover {
-                transform: scale(1.015);
-                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
-            }
-            .dark .apple-card:hover {
-                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-            }
-        }
-
         #route-modal-card .overflow-y-auto {
             padding-top: 0.75rem;
             padding-bottom: 1.5rem;
@@ -380,13 +329,13 @@
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 py-3 md:py-8 lg:px-8">
-        <div class="flex flex-col md:flex-row gap-4 lg:gap-8 xl:gap-10">
-            <aside class="w-full md:w-80 xl:w-96 shrink-0">
+    <main class="max-w-7xl mx-auto px-4 py-3">
+        <div class="flex flex-col gap-4">
+            <aside class="w-full shrink-0">
                 <div class="sticky-panel space-y-6">
                     <div id="mode-selector" class="flex p-1 bg-black/[0.05] dark:bg-white/[0.1] rounded-[12px] backdrop-blur-sm" role="tablist" aria-label="Schedule mode"></div>
                     <div class="apple-card rounded-[24px] overflow-hidden">
-                        <button onclick="toggleStopList()" class="w-full py-4 px-5 flex items-center justify-between md:hidden transition-colors" aria-expanded="false" aria-controls="stop-list-container">
+                        <button onclick="toggleStopList()" class="w-full py-4 px-5 flex items-center justify-between transition-colors" aria-expanded="false" aria-controls="stop-list-container">
                             <div class="flex items-center gap-3">
                                 <div id="mobile-status-dot" class="w-2 h-2 rounded-full bg-apple-accent shadow-[0_0_8px_rgba(0,122,255,0.5)] transition-[background-color,box-shadow,border-color,opacity]"></div>
                                 <span id="mobile-current-stop" class="font-semibold text-sm text-slate-900 dark:text-white">Select Stop</span>
@@ -394,22 +343,22 @@
                             <svg id="stop-chevron" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>
                         </button>
 
-                        <div id="stop-list-container" class="fixed inset-0 z-[100] hidden md:static md:block md:z-auto group" aria-hidden="true">
-                            <div class="absolute inset-0 bg-black/40 backdrop-blur-sm md:hidden transition-opacity opacity-0 group-[.visible]:opacity-100" onclick="toggleStopList()"></div>
-                            <div id="stop-list-sheet" class="absolute bottom-0 inset-x-0 max-h-[calc(100dvh-80px)] h-[85vh] bg-[#F2F2F7] dark:bg-[#1c1c1e] rounded-t-[20px] shadow-[0_-10px_40px_rgba(0,0,0,0.2)] transform translate-y-full transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-[.visible]:translate-y-0 flex flex-col md:relative md:inset-auto md:h-auto md:bg-transparent md:dark:bg-transparent md:rounded-none md:shadow-none md:transform-none md:translate-y-0 will-change-transform">
-                                <div id="stop-list-handle" class="w-full h-8 flex items-center justify-center md:hidden shrink-0 cursor-grab active:cursor-grabbing">
+                        <div id="stop-list-container" class="fixed inset-0 z-[100] hidden group" aria-hidden="true">
+                            <div class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity opacity-0 group-[.visible]:opacity-100" onclick="toggleStopList()"></div>
+                            <div id="stop-list-sheet" class="absolute bottom-0 inset-x-0 max-h-[calc(100dvh-80px)] h-[85vh] bg-[#F2F2F7] dark:bg-[#1c1c1e] rounded-t-[20px] shadow-[0_-10px_40px_rgba(0,0,0,0.2)] transform translate-y-full transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-[.visible]:translate-y-0 flex flex-col will-change-transform">
+                                <div id="stop-list-handle" class="w-full h-8 flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing">
                                     <div class="apple-grabber"></div>
                                 </div>
-                                <div class="px-4 pb-3 border-b border-black/[0.05] dark:border-white/[0.05] flex gap-2 shrink-0 md:pt-4 md:px-4">
-                                    <input type="text" id="stop-search" oninput="debouncedRenderStopGrid()" placeholder="搜尋車站..." class="flex-1 h-10 bg-white dark:bg-[#2C2C2E] text-[15px] px-4 rounded-[10px] outline-none placeholder-gray-400 dark:placeholder-gray-500 shadow-sm md:bg-black/[0.03] md:dark:bg-white/[0.05] md:h-auto md:text-[13px] md:py-2 md:rounded-[12px] md:shadow-none focus:ring-2 ring-apple-accent/50 transition-[background-color,box-shadow]" aria-label="搜尋車站">
-                                    <button id="gps-btn" onclick="findNearestStop()" class="w-10 h-10 shrink-0 bg-apple-accent text-white rounded-[10px] hover:bg-apple-accent/90 active:scale-95 transition-[background-color,transform,opacity] shadow-sm flex items-center justify-center disabled:opacity-50 md:w-auto md:h-auto md:p-2 md:rounded-[12px]" title="Find nearest stop" aria-label="定位最近車站">
+                                <div class="px-4 pb-3 border-b border-black/[0.05] dark:border-white/[0.05] flex gap-2 shrink-0">
+                                    <input type="text" id="stop-search" oninput="debouncedRenderStopGrid()" placeholder="搜尋車站..." class="flex-1 h-10 bg-white dark:bg-[#2C2C2E] text-[15px] px-4 rounded-[10px] outline-none placeholder-gray-400 dark:placeholder-gray-500 shadow-sm focus:ring-2 ring-apple-accent/50 transition-[background-color,box-shadow]" aria-label="搜尋車站">
+                                    <button id="gps-btn" onclick="findNearestStop()" class="w-10 h-10 shrink-0 bg-apple-accent text-white rounded-[10px] hover:bg-apple-accent/90 active:scale-95 transition-[background-color,transform,opacity] shadow-sm flex items-center justify-center disabled:opacity-50" title="Find nearest stop" aria-label="定位最近車站">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                         </svg>
                                     </button>
                                 </div>
-                                <div id="stop-grid" class="flex-1 overflow-y-auto overscroll-contain p-3 space-y-1.5 md:max-h-[60vh] md:p-2 md:space-y-1 custom-scrollbar pb-safe-area" role="listbox" aria-label="車站列表"></div>
+                                <div id="stop-grid" class="flex-1 overflow-y-auto overscroll-contain p-3 space-y-1.5 custom-scrollbar pb-safe-area" role="listbox" aria-label="車站列表"></div>
                             </div>
                         </div>
                     </div>
@@ -420,7 +369,7 @@
                 <div class="flex items-center justify-between px-1">
                     <div class="flex items-center gap-2">
                         <h2 id="arrival-title" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Arrivals</h2>
-                        <span id="selected-stop-name" class="hidden md:inline-block text-[10px] font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800">---</span>
+                        <span id="selected-stop-name" class="hidden text-[10px] font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800">---</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <span id="last-updated" class="text-[10px] font-medium text-slate-400 dark:text-slate-500 tabular-nums">—</span>
@@ -597,15 +546,15 @@
 
     <!-- Route Modal -->
     <div id="route-modal" class="fixed inset-0 z-[90] items-center justify-center" role="dialog" aria-modal="true" aria-label="路線詳情">
-        <div class="absolute inset-0 bg-white/10 dark:bg-black/20 md:bg-black/30 md:dark:bg-black/50 transition-opacity" onclick="closeRouteModal()"></div>
+        <div class="absolute inset-0 bg-white/10 dark:bg-black/20 transition-opacity" onclick="closeRouteModal()"></div>
         <div id="route-modal-card" class="relative bg-[#F2F2F7]/95 dark:bg-[#1C1C1E]/95 shadow-2xl overflow-hidden flex flex-col border border-white/20 dark:border-white/5">
-            <div class="h-8 w-full flex items-center justify-center md:hidden shrink-0 cursor-grab active:cursor-grabbing" onclick="closeRouteModal()">
+            <div class="h-8 w-full flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing" onclick="closeRouteModal()">
                 <div class="w-9 h-1.5 bg-black/[0.15] dark:bg-white/[0.2] rounded-full transition-[background-color,transform] duration-200 active:scale-x-75"></div>
             </div>
-            <div class="px-6 md:px-8 pt-5 md:pt-6 pb-4 md:pb-5 shrink-0 border-b border-black/[0.06] dark:border-white/[0.06]">
+            <div class="px-6 pt-5 pb-4 shrink-0 border-b border-black/[0.06] dark:border-white/[0.06]">
                 <div class="flex items-start justify-between gap-4">
                     <div class="flex gap-4 items-start flex-1 min-w-0">
-                        <div id="modal-route-icon" class="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-black to-gray-800 dark:from-white dark:to-gray-200 rounded-[18px] flex items-center justify-center text-white dark:text-black font-black text-xl md:text-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-[box-shadow,transform] duration-300 shrink-0"></div>
+                        <div id="modal-route-icon" class="w-14 h-14 bg-gradient-to-br from-black to-gray-800 dark:from-white dark:to-gray-200 rounded-[18px] flex items-center justify-center text-white dark:text-black font-black text-xl shadow-lg hover:shadow-xl hover:scale-105 transition-[box-shadow,transform] duration-300 shrink-0"></div>
                         <div class="flex-1 min-w-0 pt-0.5">
                             <h3 id="modal-route-name" class="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight mb-2 truncate"></h3>
                             <div class="flex items-center gap-2 flex-wrap">
@@ -613,14 +562,14 @@
                             </div>
                         </div>
                     </div>
-                    <button onclick="closeRouteModal()" class="hidden md:flex w-9 h-9 bg-black/[0.06] dark:bg-white/[0.08] hover:bg-black/[0.12] dark:hover:bg-white/[0.15] rounded-full items-center justify-center transition-[background-color,transform] duration-200 active:scale-90 shrink-0" aria-label="關閉路線詳情">
+                    <button onclick="closeRouteModal()" class="flex w-9 h-9 bg-black/[0.06] dark:bg-white/[0.08] hover:bg-black/[0.12] dark:hover:bg-white/[0.15] rounded-full items-center justify-center transition-[background-color,transform] duration-200 active:scale-90 shrink-0" aria-label="關閉路線詳情">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5 text-slate-700 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
             </div>
-            <div class="flex-1 overflow-y-auto custom-scrollbar px-6 md:px-8 pb-8 md:pb-10 pt-5">
+            <div class="flex-1 overflow-y-auto custom-scrollbar px-6 pb-8 pt-5">
                 <div class="info-pill group">
                     <div class="flex items-center gap-2 mb-1">
                         <svg class="w-4 h-4 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1160,7 +1109,7 @@
             btn.setAttribute('onclick', `setStop('${stop.id}', true)`);
             btn.setAttribute('role', 'option');
             btn.setAttribute('aria-selected', String(isSelected));
-            btn.className = `w-full px-5 py-3 rounded-[16px] text-[15px] font-semibold text-left transition-[background-color,color,box-shadow,transform] flex items-center justify-between group ${isSelected ? 'bg-apple-accent text-white shadow-lg scale-[1.02]' : (hasBuses ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-600')} hover:bg-black/[0.04] dark:hover:bg-white/[0.06] mb-1`;
+            btn.className = `w-full px-5 py-3 rounded-[16px] text-[15px] font-semibold text-left transition-[background-color,color,box-shadow,transform] flex items-center justify-between group ${isSelected ? 'bg-apple-accent text-white shadow-lg scale-[1.02] hover:brightness-110' : (hasBuses ? 'text-slate-900 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06]' : 'text-slate-400 dark:text-slate-600 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]')} mb-1`;
             btn.innerHTML = `
                 <div class="flex flex-col truncate pr-2">
                     <span data-stop-name class="truncate leading-tight">${name}</span>
@@ -1196,7 +1145,7 @@
                 state.badgeEl.className = `shrink-0 font-mono text-[10px] px-2 py-0.5 rounded-full transition-colors ${badgeClass}`;
                 state.lastBadge = badgeClass;
             }
-            const newClassName = `w-full px-5 py-3 rounded-[16px] text-[15px] font-semibold text-left transition-[background-color,color,box-shadow,transform] flex items-center justify-between group ${isSelected ? 'bg-apple-accent text-white shadow-lg scale-[1.02]' : (hasBuses ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-600')} hover:bg-black/[0.04] dark:hover:bg-white/[0.06] mb-1`;
+            const newClassName = `w-full px-5 py-3 rounded-[16px] text-[15px] font-semibold text-left transition-[background-color,color,box-shadow,transform] flex items-center justify-between group ${isSelected ? 'bg-apple-accent text-white shadow-lg scale-[1.02] hover:brightness-110' : (hasBuses ? 'text-slate-900 dark:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06]' : 'text-slate-400 dark:text-slate-600 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]')} mb-1`;
             if (newClassName !== state.lastClassName) {
                 state.btn.className = newClassName;
                 state.lastClassName = newClassName;
@@ -2051,29 +2000,6 @@
             if (navigator.vibrate) navigator.vibrate(3);
         }
 
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                const routeModal = document.getElementById('route-modal');
-                if (routeModal.classList.contains('visible')) { closeRouteModal(); return; }
-                const settingsModal = document.getElementById('settings-modal');
-                if (!settingsModal.classList.contains('hidden')) { toggleSettings(); return; }
-                const mapModal = document.getElementById('map-modal');
-                if (!mapModal.classList.contains('hidden')) { closeMapView(); return; }
-            }
-            if (e.key === 's' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-                const target = e.target;
-                if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
-                e.preventDefault();
-                toggleSettings();
-            }
-            if (e.key === 'm' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-                const target = e.target;
-                if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
-                e.preventDefault();
-                openMapView();
-            }
-        });
-
         // --- Map ---
         let mapInstance = null;
         let mapMarkers = [];
@@ -2358,7 +2284,7 @@
         });
 
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js');
+            navigator.serviceWorker.register('sw.js');
         }
     </script>
 </body>

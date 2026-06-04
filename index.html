@@ -2213,9 +2213,56 @@
             if (!el) return;
             const ts = localStorage.getItem(CACHE_UPDATE_KEY);
             if (!ts) { el.textContent = '---'; return; }
+            if (ts === 'pending') { el.textContent = lang === 'zh' ? '更新中…' : 'Updating…'; return; }
+            if (ts === 'failed') { el.textContent = lang === 'zh' ? '更新失敗' : 'Update failed'; return; }
             const d = new Date(parseInt(ts));
             const pad = n => String(n).padStart(2, '0');
             el.textContent = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+
+        const REQUIRED_ASSETS = [
+            'index.html', 'stop.json', 'route.json', 'route_segment.json',
+            'manifest.json', 'icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
+            'vendor/tw.css', 'vendor/leaflet/leaflet.css', 'vendor/leaflet/leaflet.js',
+            'vendor/leaflet/images/marker-icon.png', 'vendor/leaflet/images/marker-icon-2x.png',
+            'vendor/leaflet/images/marker-shadow.png', 'vendor/placeholder-tile.png'
+        ];
+
+        async function verifyInstall() {
+            try {
+                const names = await caches.keys();
+                for (const name of names) {
+                    const c = await caches.open(name);
+                    const keys = await c.keys();
+                    const paths = keys.map(r => new URL(r.url).pathname);
+                    if (REQUIRED_ASSETS.every(p => paths.some(u => u.endsWith('/' + p) || u.endsWith(p)))) {
+                        return true;
+                    }
+                }
+            } catch (e) {
+                console.error('[CU BUS] verifyInstall error:', e);
+            }
+            return false;
+        }
+
+        async function watchInstall(maxWaitMs = 15000) {
+            if (localStorage.getItem(CACHE_UPDATE_KEY) !== 'pending') return;
+            const btn = document.getElementById('refresh-cache-btn');
+            if (btn) { btn.textContent = lang === 'zh' ? '更新中…' : 'Updating…'; btn.disabled = true; }
+            renderCacheStatus();
+            const start = Date.now();
+            while (Date.now() - start < maxWaitMs) {
+                if (await verifyInstall()) {
+                    localStorage.setItem(CACHE_UPDATE_KEY, String(Date.now()));
+                    if (btn) { btn.textContent = lang === 'zh' ? '已更新' : 'Updated'; btn.disabled = false; }
+                    renderCacheStatus();
+                    return;
+                }
+                await new Promise(r => setTimeout(r, 500));
+            }
+            localStorage.setItem(CACHE_UPDATE_KEY, 'failed');
+            if (btn) { btn.textContent = lang === 'zh' ? '失敗 重試' : 'Failed · Retry'; btn.disabled = false; }
+            renderCacheStatus();
         }
 
         async function refreshCache() {
@@ -2223,15 +2270,19 @@
             if (!btn) return;
             btn.disabled = true;
             btn.textContent = '...';
-            localStorage.setItem(CACHE_UPDATE_KEY, String(Date.now()));
-            if ('serviceWorker' in navigator) {
-                const regs = await navigator.serviceWorker.getRegistrations();
-                await Promise.all(regs.map(r => r.unregister()));
+            try {
+                if ('serviceWorker' in navigator) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(regs.map(r => r.unregister()));
+                }
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    await Promise.all(keys.map(k => caches.delete(k)));
+                }
+            } catch (e) {
+                console.error('[CU BUS] Cache clear error:', e);
             }
-            if ('caches' in window) {
-                const keys = await caches.keys();
-                await Promise.all(keys.map(k => caches.delete(k)));
-            }
+            localStorage.setItem(CACHE_UPDATE_KEY, 'pending');
             location.reload();
         }
 
@@ -2254,6 +2305,8 @@
             setTimeout(tick, 1000 - (Date.now() % 1000));
             initBottomSheet('stop-list-sheet', 'stop-list-handle', () => toggleStopList(false));
             initBottomSheet('route-modal-card', 'route-modal-card', () => closeRouteModal());
+            renderCacheStatus();
+            watchInstall();
             window.addEventListener('resize', () => {
                 if (window.innerWidth >= 768 && isStopListOpen) toggleStopList(false);
             });

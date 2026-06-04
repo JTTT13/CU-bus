@@ -4,35 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CU BUS</title>
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
     <link rel="stylesheet" href="vendor/tw.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="apple-touch-icon" href="icons/icon-180.png">
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
     <script src="vendor/leaflet/leaflet.js">
     </script>
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Inter', 'system-ui'],
-                        mono: ['JetBrains Mono']
-                    },
-                    boxShadow: {
-                        'apple': '0 8px 30px rgb(0,0,0,0.04)',
-                        'apple-dark': '0 8px 30px rgb(0,0,0,0.2)'
-                    },
-                    colors: {
-                        apple: { gray: '#F5F5F7', dark: '#1D1D1F', accent: '#007AFF' }
-                    }
-                }
-            }
-        }
-
         const SETTINGS_KEY = 'cuhk_bus_vibe_settings';
         const CACHE_UPDATE_KEY = 'cuhk_bus_cache_updated';
         let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {
@@ -2284,7 +2267,14 @@
         });
 
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+            navigator.serviceWorker.getRegistrations().then(regs => {
+                regs.forEach(r => {
+                    if (!r.active || new URL(r.active.scriptURL).search !== '?v=2') {
+                        r.unregister();
+                    }
+                });
+            });
+            navigator.serviceWorker.register('sw.js?v=2');
         }
     </script>
 </body>

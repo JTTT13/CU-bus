@@ -2,18 +2,18 @@
     {
         "category_en": "Main Campus",
         "category_zh": "本部線",
-        "close_time": "18:50:00",
+        "close_time": "18:55:00",
         "departure_mins_json": [
             10,
-            20,
+            25,
             40,
-            50
+            55
         ],
         "has_not_standing_bus": 1,
         "has_standing_bus": 1,
-        "id": "1A",
-        "name_en": "1A",
-        "name_zh": "1A",
+        "id": "1",
+        "name_en": "1",
+        "name_zh": "1",
         "open_time": "07:40:00",
         "operating_day_type": "MON_TO_SAT",
         "remarks_en": null,
@@ -29,9 +29,9 @@
         ],
         "has_not_standing_bus": 1,
         "has_standing_bus": 1,
-        "id": "1B",
-        "name_en": "1B",
-        "name_zh": "1B",
+        "id": "2S",
+        "name_en": "2S",
+        "name_zh": "2S",
         "open_time": "08:00:00",
         "operating_day_type": "MON_TO_SAT",
         "remarks_en": null,
@@ -42,8 +42,7 @@
         "category_zh": "新聯線",
         "close_time": "18:45:00",
         "departure_mins_json": [
-            15,
-            30
+            15
         ],
         "has_not_standing_bus": 1,
         "has_standing_bus": 1,
@@ -60,7 +59,6 @@
         "category_zh": "新聯線",
         "close_time": "18:45:00",
         "departure_mins_json": [
-            0,
             45
         ],
         "has_not_standing_bus": 1,
@@ -167,10 +165,10 @@
     {
         "category_en": "Downward (Shaw College)",
         "category_zh": "下行線（逸夫）",
-        "close_time": "17:50:00",
+        "close_time": "17:18:00",
         "departure_mins_json": [
-            18,
-            50
+            0,
+            18
         ],
         "has_not_standing_bus": 1,
         "has_standing_bus": 0,
@@ -185,18 +183,18 @@
     {
         "category_en": "West Campus",
         "category_zh": "西部線",
-        "close_time": "18:40:00",
+        "close_time": "18:35:00",
         "departure_mins_json": [
-            0,
-            20,
-            40
+            15,
+            35,
+            55
         ],
         "has_not_standing_bus": 1,
         "has_standing_bus": 1,
         "id": "8",
         "name_en": "8",
         "name_zh": "8",
-        "open_time": "07:40:00",
+        "open_time": "07:35:00",
         "operating_day_type": "MON_TO_SAT",
         "remarks_en": "非教學日期間將停大學站廣場及崇基教學樓（不停大學站）",
         "remarks_zh": "非教學日期間將停大學站廣場及崇基教學樓（不停大學站）"
@@ -216,8 +214,8 @@
         "name_zh": "H",
         "open_time": "08:20:00",
         "operating_day_type": "SUN_AND_PUBLIC_HOLIDAY",
-        "remarks_en": null,
-        "remarks_zh": null
+        "remarks_en": "不停十苑站（未修改列表及到達時間）",
+        "remarks_zh": "不停十苑站（未修改列表及到達時間）"
     },
     {
         "category_en": "Holidays Service",
@@ -233,8 +231,8 @@
         "name_zh": "H（停39區及研究生宿舍）",
         "open_time": "08:20:00",
         "operating_day_type": "SUN_AND_PUBLIC_HOLIDAY",
-        "remarks_en": null,
-        "remarks_zh": null
+        "remarks_en": "不停十苑站（未修改列表及到達時間）",
+        "remarks_zh": "不停十苑站（未修改列表及到達時間）"
     },
     {
         "category_en": "Night Service",
